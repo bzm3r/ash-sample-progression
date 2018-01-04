@@ -1,5 +1,10 @@
 ./*/target/
 ./*/Cargo.lock
 
-!./tutorial-doc/ash-tutorial.tex
-!./tutorial-doc/ash-tutorial.pdf
+./tutorial-doc/*.aux
+./tutorial-doc/*.bbl
+./tutorial-doc/*.blg
+./tutorial-doc/*.log
+./tutorial-doc/*.out
+./tutorial-doc/*.synctex.gz
+./tutorial_doc/_minted-ash-tutorial
