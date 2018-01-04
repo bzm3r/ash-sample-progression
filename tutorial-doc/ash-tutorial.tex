@@ -166,37 +166,7 @@ VkResult vkEnumeratePhysicalDevices(
 	VkPhysicalDevice*                           pPhysicalDevices);
 	\end{minted}
 	
-	In Rust, \ril{ash::Instance} object has an \ril{impl} function which calls \cil{vkEnumeratePhysicalDevices} and returns the result. Let's examine how it works (see documentation for \ril{ash::Instance}, and click "src"):
-		\begin{minted}{rust}
-fn enumerate_physical_devices(&self) -> VkResult<Vec<vk::PhysicalDevice>> {
-	unsafe {
-		let mut num = mem::uninitialized();
-		// call enumerate_physical_devices (through function pointers to underlying C API)
-		self.fp_v1_0().enumerate_physical_devices(
-			self.handle(), 		// handle to an integer
-			&mut num,			// pointer to where we are going to store the count int
-			ptr::null_mut(),	// null pointer, since we are querying for count 
-		);
-		
-		// result of first call is now stored in `num`
-		// allocate the vector for physical devices based on count
-		let mut physical_devices = Vec::<vk::PhysicalDevice>::with_capacity(num as usize);
-		
-		// call `vkEnumeratePhyiscalDevices` again, with a pointer to the vec we allocated mem for
-		let err_code = self.fp_v1_0().enumerate_physical_devices(
-			self.handle(),
-			&mut num,
-			physical_devices.as_mut_ptr(),
-		);
-		
-		physical_devices.set_len(num as usize);
-		match err_code {
-			vk::Result::Success => Ok(physical_devices),
-			_ => Err(err_code),
-		}
-	}
-}
-		\end{minted}
+	In Rust, \ril{ash::Instance} object has an \ril{impl} function which calls \cil{vkEnumeratePhysicalDevices} and returns the result. Have a look at how it works (see documentation for \ril{ash::Instance}, and click "src"): \href{https://gist.github.com/bzm3r/175cd2b63db8f783ed968df20462be67}{gist link for annotated \texttt{enumerate\_physical\_devices}}.
 		
 	So under the hood, Ash follows exactly the pattern we noted above. 
 \end{document}
