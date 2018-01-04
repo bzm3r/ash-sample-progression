@@ -1,10 +1,10 @@
 ./*/target/
 ./*/Cargo.lock
 
-./tutorial-doc/*.aux
-./tutorial-doc/*.bbl
-./tutorial-doc/*.blg
-./tutorial-doc/*.log
-./tutorial-doc/*.out
-./tutorial-doc/*.synctex.gz
-./tutorial_doc/_minted-ash-tutorial
+tutorial-doc/*.aux
+tutorial-doc/*.bbl
+tutorial-doc/*.blg
+tutorial-doc/*.log
+tutorial-doc/*.out
+tutorial-doc/*.synctex.gz
+tutorial-doc/_minted-ash-tutorial/
