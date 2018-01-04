@@ -1,0 +1,5 @@
+[0] Config.pm:354> INFO - This is Biber 2.6
+[0] Config.pm:357> INFO - Logfile is 'ash-tutorial.blg'
+[64] biber-MSWIN32:302> INFO - === 
+[547] Utils.pm:180> ERROR - Cannot find control file 'ash-tutorial.bcf'! - did you pass the "backend=biber" option to BibLaTeX?
+[547] Biber.pm:113> INFO - ERRORS: 1

@@ -1,14 +1,23 @@
+// we want to use macros defined by the ash crate
 #![feature(use_extern_macros)]
 extern crate ash;
 
-use std::ffi::{CString};
+// a CString is a data structure compatable with C/C++ strings
+use std::ffi::CString; 
+// ash module which contains basic structs and functions reminiscent from Vulkan
 use ash::vk;
+// unsafe Rust feature which allows us to pass NULL pointers to C functions/interpret NULL points from C functions
 use std::ptr;
+// see std::default documentation
 use std::default::Default;
+// ash module which contains functions that provide syntactic sugar around the steps needed to interface with C Vulkan 
 use ash::Entry;
+// ash definition of the Instance handle
 use ash::Instance;
+// ash stuff to help us choose the right Vulkan version
 use ash::version::{EntryV1_0, InstanceV1_0, V1_0};
 
+// code is a Rust version of: https://github.com/LunarG/VulkanSamples/blob/master/API-Samples/01-init_instance/01-init_instance.cpp
 fn main() {
     unsafe {
         let app_name = CString::new("vulkansamples_instance").unwrap();

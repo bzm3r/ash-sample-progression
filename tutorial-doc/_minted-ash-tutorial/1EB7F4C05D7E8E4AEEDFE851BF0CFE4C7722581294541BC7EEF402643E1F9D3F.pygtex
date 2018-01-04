@@ -1,0 +1,6 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{n}{VkResult} \PYG{n+nf}{vkCreateInstance}\PYG{p}{(}
+\PYG{k}{const} \PYG{n}{VkInstanceCreateInfo}\PYG{o}{*}                 \PYG{n}{pCreateInfo}\PYG{p}{,}
+\PYG{k}{const} \PYG{n}{VkAllocationCallbacks}\PYG{o}{*}                \PYG{n}{pAllocator}\PYG{p}{,}
+\PYG{n}{VkInstance}\PYG{o}{*}                                 \PYG{n}{pInstance}\PYG{p}{);}
+\end{Verbatim}

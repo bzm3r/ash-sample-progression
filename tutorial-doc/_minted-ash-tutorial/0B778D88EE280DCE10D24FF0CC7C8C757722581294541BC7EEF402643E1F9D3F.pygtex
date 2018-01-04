@@ -1,0 +1,11 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k}{typedef} \PYG{k}{struct} \PYG{n}{VkApplicationInfo} \PYG{p}{\PYGZob{}}
+	\PYG{n}{VkStructureType}    \PYG{n}{sType}\PYG{p}{;}
+	\PYG{k}{const} \PYG{k+kt}{void}\PYG{o}{*}        \PYG{n}{pNext}\PYG{p}{;}
+	\PYG{k}{const} \PYG{k+kt}{char}\PYG{o}{*}        \PYG{n}{pApplicationName}\PYG{p}{;}
+	\PYG{k+kt}{uint32\PYGZus{}t}           \PYG{n}{applicationVersion}\PYG{p}{;}
+	\PYG{k}{const} \PYG{k+kt}{char}\PYG{o}{*}        \PYG{n}{pEngineName}\PYG{p}{;}
+	\PYG{k+kt}{uint32\PYGZus{}t}           \PYG{n}{engineVersion}\PYG{p}{;}
+	\PYG{k+kt}{uint32\PYGZus{}t}           \PYG{n}{apiVersion}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}} \PYG{n}{VkApplicationInfo}\PYG{p}{;}
+\end{Verbatim}

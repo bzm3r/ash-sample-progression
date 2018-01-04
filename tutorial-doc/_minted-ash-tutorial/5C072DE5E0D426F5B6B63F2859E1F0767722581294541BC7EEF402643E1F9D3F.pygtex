@@ -1,0 +1,6 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{n}{VkResult} \PYG{n+nf}{vkEnumeratePhysicalDevices}\PYG{p}{(}
+	\PYG{n}{VkInstance}                                  \PYG{n}{instance}\PYG{p}{,}
+	\PYG{k+kt}{uint32\PYGZus{}t}\PYG{o}{*}                                   \PYG{n}{pPhysicalDeviceCount}\PYG{p}{,}
+	\PYG{n}{VkPhysicalDevice}\PYG{o}{*}                           \PYG{n}{pPhysicalDevices}\PYG{p}{);}
+\end{Verbatim}

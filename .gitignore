@@ -1,2 +1,4 @@
 ./*/target/
 ./*/Cargo.lock
+
+!./tutorial-doc/ash-tutorial.tex
