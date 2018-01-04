@@ -168,5 +168,7 @@ VkResult vkEnumeratePhysicalDevices(
 	
 	In Rust, \ril{ash::Instance} object has an \ril{impl} function which calls \cil{vkEnumeratePhysicalDevices} and returns the result. Have a look at how it works (see documentation for \ril{ash::Instance}, and click "src"): \href{https://gist.github.com/bzm3r/175cd2b63db8f783ed968df20462be67}{gist link for annotated \texttt{enumerate\_physical\_devices}}.
 		
-	So under the hood, Ash follows exactly the pattern we noted above. 
+	So under the hood, Ash follows exactly the pattern we noted above. Have a look at the source for "enumerate-devices", where we query for the list of the physical devices on our system, and print out how many we found.
+	
+\section{Next}
 \end{document}
