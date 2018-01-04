@@ -2,3 +2,4 @@
 ./*/Cargo.lock
 
 !./tutorial-doc/ash-tutorial.tex
+!./tutorial-doc/ash-tutorial.pdf
