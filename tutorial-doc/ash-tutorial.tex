@@ -25,6 +25,18 @@
 \newcommand{\ril}[1]{\mintinline{rust}{#1}}
 \newcommand{\cil}[1]{\mintinline{c}{#1}}
 
+\newcommand{\vulkanquerypattern}{
+	\begin{enumerate}
+		\item Application calls the function with a valid pointer to an integer for the count argument and a \cil{NULL} for the pointer argument.
+		
+		\item The API fills in the count argument with the number of objects in the list.
+		
+		\item The application allocates enough space to store the list.
+		
+		\item The application calls the function again with the pointer argument pointing to the space just allocated.
+	\end{enumerate}
+}
+
 \begin{document}
 
 \title{Using Vulkan with Rust via Ash: A Samples Tutorial}
@@ -58,6 +70,14 @@ We are interested in using Rust to write our application, but the Vulkan API is 
 	A Vulkan \emph{instance} is a software object which your application uses to interact with Vulkan device(s). The physical device(s) in your computing system that one can use Vulkan to interact with are represented as members of the instance. Commands from your application are passed through a Vulkan instance into a \emph{queue} (each associated with a logical device abstracting a subset of the physical device's resources) which pipes to and from the physical device. 
 	
 	Note that since an instance is a software abstraction, if necessary, one could have several instances interacting with one physical device, if it provides value to how your application abstracts your physical devices. For now though, we'll focus on using one instance.
+
+\section{Setup}
+	Make sure:
+		\begin{enumerate}
+			\item you have the rust compiler installed: \href{https://www.rust-lang.org}{https://www.rust-lang.org} (I am going to assume you've gone through the basics of Rust);
+			
+			\item you have the Vulkan SDK installed: \href{https://www.lunarg.com/vulkan-sdk/}{https://www.lunarg.com/vulkan-sdk/}.
+		\end{enumerate}
 	
 \section{\texttt{init-instance.rs}}
 	
@@ -151,19 +171,10 @@ typedef struct VkApplicationInfo {
 			\item note how we have to manually destroy the instance.
 		\end{itemize} 
 	
-	Don't forget to call "cargo run" for "init-instance" to make sure that everything compiles. 
+	Don't forget to call "cargo run --bin init-instance" to actually see everything in action!
 	
 \section{\texttt{enumerate-devices.rs}}
-	Now that we know how to initialize an instance, let us learn how to use it to enumerate the physical devices on our system. In general, obtaining a list of stuff is a fairly common operation in Vulkan, so there's a generalized pattern behind what we want to do on the C side of things:
-		\begin{enumerate}
-			\item Application calls the function with a valid pointer to an integer for the count argument and a \cil{NULL} for the pointer argument.
-			
-			\item The API fills in the count argument with the number of objects in the list.
-			
-			\item The application allocates enough space to store the list.
-			
-			\item The application calls the function again with the pointer argument pointing to the space just allocated.
-		\end{enumerate}
+	Now that we know how to initialize an instance, let us learn how to use it to enumerate the physical devices on our system. In general, obtaining a list of stuff is a fairly common operation in Vulkan, so there's a generalized pattern behind what we want to do on the C side of things: \vulkanquerypattern
 	
 	Alright, so what does the function prototype for \cil{vkEnumeratePhysicalDevices} look like?
 	\begin{minted}{c}
@@ -172,16 +183,26 @@ VkResult vkEnumeratePhysicalDevices(
 	uint32_t*                                   pPhysicalDeviceCount,
 	VkPhysicalDevice*                           pPhysicalDevices);
 	\end{minted}
+	How would we use it then, given the pattern we just went over? Assume we have a \cil{vkInstance} called \cil{instance} at hand and a pointer to memory where we can store an unsigned integer \cil{pPhysicalDeviceCount}. Then, we would:
+		\begin{enumerate}
+			\item call \cil{vkEnumeratePhysicalDevices(instance, pPhysicalDeviceCount, NULL)}---if \cil{vkResult} indicates success, then \cil{pPhysicalDeviceCount} now points to an integer denoting the number of physical devices available;
+			
+			\item allocate enough memory for a list of \cil{VkPhysicalDevice}s containing \cil{*pPhysicalDeviceCount} items (in C-ish the list would be of type \cil{VkPhysicalDevice*}), and call it \cil{pPhysicalDevices} (the preceding "p" indicates \inquotes{pointer} in C-ish naming conventions);
+			
+			\item call \cil{vkEnumeratePhysicalDevices(instance, pPhysicalDeviceCount, pPhysicalDevices}---if \cil{vkResult} indicates success, then our list \cil{pPhysicalDevices} should be properly filled out with the \cil{vkPhysicalDevice}s.
+		\end{enumerate}
 	
-	In Rust, \ril{ash::Instance} object has an \ril{impl} function which calls \cil{vkEnumeratePhysicalDevices} and returns the result. Have a look at how it works (see documentation for \ril{ash::Instance}, and click "src"): \href{https://gist.github.com/bzm3r/175cd2b63db8f783ed968df20462be67}{gist link for annotated \texttt{enumerate\_physical\_devices}}.
-		
-	So under the hood, Ash follows exactly the pattern we noted above. Have a look at the source for "enumerate-devices", where we query for the list of the physical devices on our system, and print out how many we found.
+	How would we do this in Rust? The \ril{ash::Instance} "struct" has an \ril{impl} function \ril{ash::Instance::enumerate_physical_devices}, which calls \cil{vkEnumeratePhysicalDevices} for us and returns a vector of \ril{vk::PhysicalDevice}s. Have a look at how it works (to find it for yourself, go to Ash's documentation for \ril{ash::Instance}, and click "src"): \href{https://gist.github.com/bzm3r/175cd2b63db8f783ed968df20462be67}{gist link for annotated \texttt{enumerate\_physical\_devices}}. So under the hood, Ash follows exactly the pattern we noted above. 
+	
+	Have a look at the source for "enumerate-devices", where we query for the list of the physical devices on our system, and print out how many we found, and run it with "cargo run --bin enumerate-devices" to see how many physical devices are on your system.
 	
 \section{\texttt{init-device.rs}}
 
 So far, we know how to create an instance, which allows our application to communicate with underlying physical devices that provide a Vulkan-compatible driver. In particular, we know how to use the instance to query if there are any such physical devices. 
 
-Assuming that you have found at least one such physical device (if you haven't found one, do you have Vulkan-compatible drivers installed for your CPU/GPU, and is your CPU/GPU new enough to support Vulkan functionality?), we will now learn how to create the logical device abstraction over this physical device. Recall that the logical device allows us to eventually create queues which pass data between your application and the physical device. 
+The rest of this tutorial is assuming you found at least one physical device on your system. If you haven't found one, do you have Vulkan-compatible drivers installed for your CPU/GPU, and is your CPU/GPU new enough to support Vulkan functionality? You'll have to do some trouble shooting here. 
+
+Assuming that you have found at least one such physical device, we will now learn how to create the logical device abstraction over this physical device. Recall that the logical device allows us to eventually create queues which pass data between your application and the physical device. 
 
 For the sake of simplicity, we'll just choose the first (perhaps only) device we've found. Let's ask the physical device what sort of queue families it supports. We do so by by calling the C function \cil{vkGetPhysicalDeviceQueueFamilyProperties} which has prototype:
 	\begin{minted}{c}
@@ -190,11 +211,19 @@ void vkGetPhysicalDeviceQueueFamilyProperties(
 	uint32_t*                                   pQueueFamilyPropertyCount,
 	VkQueueFamilyProperties*                    pQueueFamilyProperties);
 	\end{minted}
-We have to pass \cil{vkGetPhysicalDeviceQueueFamilyProperties}:
-	\begin{itemize}
-		\item \cil{physicalDevice}: a \cil{VkPhysicalDevice} we want to get information about;
+Remember how we talked about the pattern Vulkan functions which return a list of things (in this case, queue family properties) tend to follow? That pattern applies here, so let's recap it: \vulkanquerypattern
+
+Assuming we have some \cil{vkPhysicalDevice} called \cil{physicalDevice}, and a pointer to an unsigned integer \cil{pQueueFamilyPropertyCount}, this is how we would use \cil{vkGetPhysicalDeviceQueueFamilyProperties} to get a list of \cil{VkQueueFamilyProperties}:
+	\begin{enumerate}
+		\item call \cil{vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, pQueueFamilyPropertyCount, NULL)}---if \cil{vkResult} indicates success, \cil{pQueueFamilyPropertyCount} will now point to an integer counting the number of queue families supported by \cil{physical device};
 		
-		\item 
-	\end{itemize} , 
+		\item allocate memory for a list of \cil{VkQueueFamilyProperties} containing \cil{*pQueueFamilyPropertyCount} items, and store a pointer to it in \cil{pQueueFamilyProperties};
+		
+		\item call \cil{vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, pQueueFamilyPropertyCount, pQueueFamilyProperties)}---if \cil{vkResult} indicates success, \cil{pQueueFamilyProperties} will now point to a list of \cil{vkQueueFamilyProperties}.
+	\end{enumerate}
+
+	Ash makes our life easy by giving us an \ril{impl} function on \ril{ash::Instance} which does the above: \ril{ash::Instance::get_physical_device_queue_family_properties}. If you examine its source (recall how we found the source for \ril{ash::Instance::enumerate_physical_devices}) you'll see that the same steps we outlined above are repeated. Upon success, we get a \ril{Vec<QueueFamilyProperties>}. 
+	
+	
 	
 \end{document}
