@@ -4,6 +4,13 @@
 \usepackage[T1]{fontenc}
 \usepackage{shortvrb} % make "" behave like \texttt
 \usepackage{hyperref} % hyper-referencing/link capabilities in PDF
+\usepackage{xcolor} % colours for making hyperlinks look nicer
+\hypersetup{
+	colorlinks,
+	linkcolor={red!50!black},
+	citecolor={blue!50!black},
+	urlcolor={blue!50!black}
+}
 \usepackage[margin=1in]{geometry} % control size of margins
 %\usepackage{listings} % allow pretty formatting of stuff that needs pretty formatting
 \usepackage{minted} % making nicely coloured code snippets
@@ -171,5 +178,23 @@ VkResult vkEnumeratePhysicalDevices(
 	So under the hood, Ash follows exactly the pattern we noted above. Have a look at the source for "enumerate-devices", where we query for the list of the physical devices on our system, and print out how many we found.
 	
 \section{\texttt{init-device.rs}}
+
+So far, we know how to create an instance, which allows our application to communicate with underlying physical devices that provide a Vulkan-compatible driver. In particular, we know how to use the instance to query if there are any such physical devices. 
+
+Assuming that you have found at least one such physical device (if you haven't found one, do you have Vulkan-compatible drivers installed for your CPU/GPU, and is your CPU/GPU new enough to support Vulkan functionality?), we will now learn how to create the logical device abstraction over this physical device. Recall that the logical device allows us to eventually create queues which pass data between your application and the physical device. 
+
+For the sake of simplicity, we'll just choose the first (perhaps only) device we've found. Let's ask the physical device what sort of queue families it supports. We do so by by calling the C function \cil{vkGetPhysicalDeviceQueueFamilyProperties} which has prototype:
+	\begin{minted}{c}
+void vkGetPhysicalDeviceQueueFamilyProperties(
+	VkPhysicalDevice                            physicalDevice,
+	uint32_t*                                   pQueueFamilyPropertyCount,
+	VkQueueFamilyProperties*                    pQueueFamilyProperties);
+	\end{minted}
+We have to pass \cil{vkGetPhysicalDeviceQueueFamilyProperties}:
+	\begin{itemize}
+		\item \cil{physicalDevice}: a \cil{VkPhysicalDevice} we want to get information about;
+		
+		\item 
+	\end{itemize} , 
 	
 \end{document}
