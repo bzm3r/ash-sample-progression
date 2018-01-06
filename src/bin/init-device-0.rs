@@ -35,7 +35,7 @@ fn main() {
             destroy_instance_and_panic("No queue families found!", instance);
         }
 
-        for (index, ref qfp_info) in queue_family_properties.iter().enumerate() {
+        for (index, qfp_info) in queue_family_properties.iter().enumerate() {
             println!("=========");
             print!("index: {}\n\
                     num queues: {}\n\

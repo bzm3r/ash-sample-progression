@@ -80,7 +80,7 @@
 	
 \section{Introduction}
 
-Vulkan provides an interface between your application, and a Vulkan device, which the application wants to use for highly-parallel computation typical of graphics tasks, but also useful elsewhere. Vulkan can interface with many different types of \emph{physical devices}:
+Vulkan provides an interface between your application and a Vulkan-compatible physical device installed in your system, which the application wants to use for highly-parallel computation typical of graphics tasks, but also useful elsewhere. Vulkan can interface with many different types of physical devices:
 	\begin{itemize}
 		\item the CPU of your system
 		\item \href{https://www.reddit.com/r/vulkan/comments/5f7jhn/is_it_possible_to_run_vulkan_on_cpu/}{a software abstraction running on top of the CPU}
@@ -88,17 +88,17 @@ Vulkan provides an interface between your application, and a Vulkan device, whic
 		\item many CPUs configured to share data with each other
 		\item et cetera
 	\end{itemize}
-Note that each one of these devices also should have some memory, where instructions, input data, and output data may be stored. Vulkan allows your application to interface with all these different \inquotes{physical devices} and their memory, regardless of the details of each device's configuration, as long as the physical device provides a Vulkan-compatible \inquotes{driver}, which would be a piece of software that provides a Vulkan interface to the underlying hardware. Thus, as an application programmer, you only need to worry about interfacing your application with Vulkan, while the drivers handle interfacing Vulkan with the hardware. 
+Note that each one of these physical devices also have some associated memory, where instructions, input data, and output data may be stored. Vulkan allows your application to interface with many varieties of physical devices, regardless of the details of each physical device's configuration, as long as the physical device provides a Vulkan-compatible \inquotes{driver}, which would be a piece of software that provides a Vulkan interface to the underlying hardware. Thus, as an application programmer, you only need to worry about interfacing your application with Vulkan, while the drivers handle interfacing Vulkan with the hardware. 
 
 Note that the driver doesn't do anything beyond helping Vulkan pass instructions to the hardware, so verifying whether the instructions you send make sense, or whether the resulting data from a computation is not garbage, is your task. However, during development of your application, you can specify additional software \emph{layers} between your application's \inquotes{loader} (i.e. its Vulkan communication object) and the physical device's driver, which can help to debug and verify the correctness of the instructions you are passing through the loader. You can choose to turn on and off these loaders as you wish.
 
-Let's now take a closer look at the loader, which is more specifically called an \inquotes{instance}. When you first create the instance, it searches your system for physical devices with Vulkan-compatible drivers, and enumerates these for you, so that you can choose which physical device(s) you would like to work with. Once you have chosen specifical physical devices, you can describe more specifically which features of each physical device you would like to use (e.g. 64-bit floats, or 32-bit floats?). Each physical device can then be abstracted into \inquotes{logical devices}, which represent subsets of a physical device's resources. For example, let us say your application needs to do some graphics calculations, and some simulation related calculations: so to organize your physical device(s)' computing resources, you could set one logical device to deal with the graphics, and the other logical device could be set to deal with calculations. Thus, specification of logical devices is an abstraction that helps you organize computing resources. Each logical device allows you to create \inquotes{queues}, which are selected from \inquotes{queue families}. Queues organize the communication of data from your application (e.g. computation instructions, or some data to be manipulated) to the physical device's driver, and they also organize communication of data from your physical device to your application (e.g. results of computations, or status of the device's computing efforts). Queue families represent specialization of queues: queues to handle data (memory) transfers, queues to handle instruction transfer, etc. Note that sometimes, only certain queue families may be available on certain physical devices (and their availability may indicate what role the physical device is specialized for), but common physical devices tend to support all commonly used queue families. Finally, we may also take advantage of functionality provided by Vulkan \inquotes{extensions}, which are API extensions that provide common functionality for some often-occurring Vulkan use-cases (e.g. graphics display).
+Let's now take a closer look at the loader, which is more specifically called an \inquotes{instance}. When you first create the instance, it searches your system for physical devices with Vulkan-compatible drivers, and enumerates these for you, so that you can choose which physical device(s) you would like to work with. Once you have chosen specific physical devices, you can describe more specifically which features of each physical device you would like to use (e.g. 64-bit floats, or 32-bit floats?). Each physical device can then be abstracted into \inquotes{logical devices}, which is a software represent subsets of a physical device's resources. For example, let us say your application needs to do some graphics calculations, and some simulation related calculations: so to organize your physical device(s)' computing resources, you could set one logical device to deal with the graphics, and the other logical device could be set to deal with calculations. Thus, specification of logical devices is an abstraction that helps you organize computing resources. Each logical device allows you to create \inquotes{queues}, which are selected from \inquotes{queue families}. Queues organize the communication of data from your application (e.g. computation instructions, or some data to be manipulated) to the physical device's driver, and they also organize communication of data from your physical device to your application (e.g. results of computations, or status of the physical device's computing efforts). Queue families represent specialization of queues: queues to handle data (memory) transfers, queues to handle instruction transfer, etc. Note that sometimes, only certain queue families may be available on certain physical devices (and their availability may indicate what role the physical device is specialized for), but common physical devices tend to support all commonly used queue families. Finally, we may also take advantage of functionality provided by Vulkan \inquotes{extensions}, which are API extensions that provide common functionality for some often-occurring Vulkan use-cases (e.g. graphics display).
 
 We are interested in using Rust to write our application, but the Vulkan API is written in C, so we use \href{https://github.com/MaikKlein/ash}{Ash}, which is a lightweight (thus unsafe) Rust wrapper around Vulkan. This document will teach you how to use Vulkan through Ash, by helping you build a series of small programs (\inquotes{samples}) which iterate upon each other towards a final product (displaying a cube). 
 
-\section{An Overview of Vulkan's Abstraction System: Instances, Devices and Queues}
+\section{An Overview of Vulkan's Abstraction System over Physical Devices: Instances, Logical Devices and Queues}
 
-A Vulkan \emph{instance} is a software object which your application uses to interact with Vulkan device(s). The physical device(s) in your computing system that one can use Vulkan to interact with are represented as members of the instance. Commands from your application are passed through a Vulkan instance into a \emph{queue} (each associated with a logical device abstracting a subset of the physical device's resources) which pipes to and from the physical device. 
+A Vulkan \emph{instance} is a software object (with C-ish type \cil{vkInstance}) which your application uses to interact with Vulkan-compatible physical devices which are represented as members of the instance. Commands from your application are passed through a Vulkan instance into a \emph{queue} (each associated with a logical device abstracting a subset of the physical device's resources) which pipes to and from the physical device. 
 
 Note that since an instance is a software abstraction, if necessary, one could have several instances interacting with one physical device, if it provides value to how your application abstracts your physical devices. For now though, we'll focus on using one instance.
 	
@@ -118,12 +118,12 @@ VkInstance*                                 pInstance);
 			
 			\item argument \cil{pCreateInfo}: a pointer to a \cil{vkInstanceCreateInfo} "struct";
 			
-			\item argument \cil{pAllocator}: a pointer to a \cil{vkAllocationCallbacks} "struct" whose members contain various functions you might have written to help the physical device organize its memory usage---we will tend to go simple, and not provide anything, in which case the device will use its default memory management routines;
+			\item argument \cil{pAllocator}: a pointer to a \cil{vkAllocationCallbacks} "struct" whose members contain various functions you might have written to help the physical device organize its memory usage---we will tend to go simple, and not provide anything, in which case the physical device will use its default memory management routines;
 			
 			\item argument \cil{pInstance} an \inquotes{opaque pointer} to an instance (an opaque pointer is a C-ish concept which provides a pointer to a data structure, but the pointer cannot be used to query details of the data structure, nor can it be de-referenced)
 		\end{itemize}
 	
-	Let's now have a closer look at \cil{vkInstanceCreateInfo} "struct" definition:
+	Let's now have a closer look at \cil{vkInstanceCreateInfo} "struct" definition, which has some members typical to many other Vulkan \inquotes{info "struct"}s:
 		\begin{minted}{c}
 typedef struct VkInstanceCreateInfo {
 	VkStructureType             sType;
@@ -138,13 +138,13 @@ typedef struct VkInstanceCreateInfo {
 		\end{minted}
 	A brief description of the members:
 		\begin{itemize}
-			\item \cil{sType}: indicates the type of the structure, in this case "VK\_STRUCTURE\_TYPE\_INSTANCE\_CREATE\_INFO"---this is useful because in C, you might sometimes get a typeless (\cil{void*}) pointer to a particular struct, and to determine what kind of struct it is, you could query the \cil{sType} field
+			\item \cil{sType}: indicates the type of the info "struct", in this case "VK\_STRUCTURE\_TYPE\_INSTANCE\_CREATE\_INFO"---this is useful because in C, you might sometimes get a typeless (\cil{void*}) pointer to a particular "struct", and to determine what kind of "struct" it is, you could query the \cil{sType} field
 			
-			\item \cil{pNext}: usually set to \cil{NULL}, and can be used to pass additional structures (whose type will be defined by the \cil{sType} field), sometimes needed by API extensions
+			\item \cil{pNext}: another typical info "struct" member, usually set to \cil{NULL}, and can be used to pass additional "struct"s (whose type will be defined by the \cil{sType} field), sometimes needed by API extensions
 			
 			\item \cil{flags}: currently no flags defined, set to "0"
 			
-			\item \cil{pApplicationInfo}: pointer to a \cil{VkApplicationInfo} structure which we will study next
+			\item \cil{pApplicationInfo}: pointer to a \cil{VkApplicationInfo} "struct" which we will study next
 			
 			\item \cil{ppEnabledLayerNames}: in this tutorial, we will not be using layers, so we can set this to \cil{NULL}
 			
@@ -166,7 +166,7 @@ typedef struct VkApplicationInfo {
 	uint32_t           apiVersion;
 } VkApplicationInfo;
 		\end{minted}
-	This structure is meant to provide some information regarding your application; a brief overview of its members:
+	This "struct" is meant to provide some information regarding your application; a brief overview of its members:
 		\begin{itemize}
 			\item \cil{sType}, \cil{pNext}: common features of many Vulkan info "struct"s, see the \cil{vkInstanceCreateInfo} "struct"'s member overview, as these are the same;
 			
@@ -200,7 +200,7 @@ typedef struct VkApplicationInfo {
 		\end{center}
 	
 \section{\texttt{enumerate-devices.rs}}
-	Now that we know how to initialize an instance, let us learn how to use it to enumerate the physical devices on our system. In general, obtaining a list of stuff is a fairly common operation in Vulkan, so there's a generalized pattern behind what we want to do on the C side of things. Say you have a function \cil{getListData} to get a list of some stuff from some instance of a structure \cil{aStruct}:
+	Now that we know how to initialize an instance, let us learn how to use it to enumerate the physical devices on our system. In general, obtaining a list of stuff is a fairly common operation in Vulkan, so there's a generalized pattern behind what we want to do on the C side of things. Say you have a function \cil{getListData} to get a list of some stuff from some instance of a "struct" \cil{aStruct}:
 		\begin{itemize}
 			\item \cil{getListData} will have prototype:
 				\begin{minted}{rust}
@@ -235,7 +235,7 @@ VkResult vkEnumeratePhysicalDevices(
 			\item call \cil{vkEnumeratePhysicalDevices(instance, pPhysicalDeviceCount, pPhysicalDevices}---if \cil{vkResult} indicates success, then our list \cil{pPhysicalDevices} should be properly filled out with the \cil{vkPhysicalDevice}s.
 		\end{enumerate}
 	
-	How would we do this in Rust? The \ril{ash::Instance} "struct" has an \ril{impl} function \ril{ash::Instance::enumerate_physical_devices}, which calls \cil{vkEnumeratePhysicalDevices} for us and returns a vector of \ril{vk::PhysicalDevice}s. Have a look at how it works (to find it for yourself, go to Ash's documentation for \ril{ash::Instance}, and click "src"): \href{https://gist.github.com/bzm3r/175cd2b63db8f783ed968df20462be67}{gist link for annotated \texttt{enumerate\_physical\_devices}}. So under the hood, Ash follows exactly the pattern we noted above. 
+	How would we do this in Rust? The \ril{ash::Instance} "struct" has an \ril{impl} function \ril{ash::Instance::enumerate_physical_devices}, which calls \cil{vkEnumeratePhysicalDevices} for us and returns a vector of \ril{vk::PhysicalDevice}s. Have a look at how it works: \href{https://gist.github.com/bzm3r/175cd2b63db8f783ed968df20462be67}{gist link for annotated \ril{enumerate_physical_devices}}. To find the source for yourself, go to Ash's documentation for \ril{ash::Instance}, and click the appropriate "[src]" links. You can see that under the hood, Ash follows exactly the pattern we noted above. 
 	
 	Have a look at "enumerate-devices.rs", where we query for the list of the physical devices on our system, and print out how many we found. So, to figure out how many physical devices are on your system run "enumerate-devices.rs": 
 		\begin{center}
@@ -244,25 +244,26 @@ VkResult vkEnumeratePhysicalDevices(
 	
 \section{\texttt{init-device.rs}}
 	
-	So far, we know how to create an instance, which allows our application to communicate with underlying physical devices that provide a Vulkan-compatible driver. In particular, we know how to use the instance to query if there are any such physical devices. 
-	
-	The rest of this tutorial is assuming you found at least one physical device on your system. If you haven't found one, do you have Vulkan-compatible drivers installed for your CPU/GPU, and is your CPU/GPU new enough to support Vulkan functionality? You'll have to do some trouble shooting here. 
-	
-	Assuming that you have found at least one such physical device, we will now learn how to create the logical device abstraction over this physical device. Recall that the logical device allows us to eventually create queues which pass data between your application and the physical device. 
-	
-	For the sake of simplicity, we'll just choose the first (perhaps only) device we've found. Let's ask the physical device what sort of queue families it supports. We do so by by calling the C function \cil{vkGetPhysicalDeviceQueueFamilyProperties} which has prototype:
-		\begin{minted}{c}
-void vkGetPhysicalDeviceQueueFamilyProperties(
-	VkPhysicalDevice                            physicalDevice,
-	uint32_t*                                   pQueueFamilyPropertyCount,
-	VkQueueFamilyProperties*                    pQueueFamilyProperties);
-		\end{minted}
-	Note that this function has the same structure as a function which can either give information about the number of some objects of interest, or provide a list of the same objects of interest. In the last section, we discussed how such a function would be used, and we simply need to repeat that process in order to get a list of \cil{VkQueueFamilyProperties}.
-	
-	Again, similar to \ril{ash::Instance::enumerate_physical_devices} discussed in the last section, Ash makes our life easy by giving us an \ril{impl} function on \ril{ash::Instance} which does performs the details of getting a list of \ril{vk_sys::QueueFamilyProperties}: \ril{ash::Instance::get_physical_device_queue_family_properties}. If you examine its source (recall how we found the source for \ril{ash::Instance::enumerate_physical_devices}) you'll see the similarities between the functions. Upon a successful call to \cil{get_physical_device_queue_family_properties}, we get a \ril{Vec<vk_sys::QueueFamilyProperties>}.
-	
-	What's inside C-ish \cil{vkQueueFamilyProperties}?
-\begin{minted}{c}
+	\subsection{\texttt{init-device-0.rs}}
+		So far, we know how to create an instance, which allows our application to communicate with underlying physical devices that provide a Vulkan-compatible driver. In particular, we know how to use the instance to query if there are any such physical devices. 
+		
+		The rest of this tutorial is assuming you found at least one physical device on your system. If you haven't found one, do you have Vulkan-compatible drivers installed for your CPU/GPU, and is your CPU/GPU new enough to support Vulkan functionality? You'll have to do some trouble shooting here. 
+		
+		Assuming that you have found at least one such physical device, we will now learn how to create the logical device abstraction over this physical device. Recall that the logical device allows us to eventually create queues which pass data between your application and the physical device. 
+		
+		For the sake of simplicity, we'll just choose the first (perhaps only) device we've found. Let's ask the physical device what sort of queue families it supports. We do so by by calling the C function \cil{vkGetPhysicalDeviceQueueFamilyProperties} which has prototype:
+			\begin{minted}{c}
+	void vkGetPhysicalDeviceQueueFamilyProperties(
+		VkPhysicalDevice                            physicalDevice,
+		uint32_t*                                   pQueueFamilyPropertyCount,
+		VkQueueFamilyProperties*                    pQueueFamilyProperties);
+			\end{minted}
+		Note that this function has the same organization as a function which can either give information about the number of some objects of interest, or provide a list of the same objects of interest. In the last section, we discussed how such a function would be used, and we simply need to repeat that process in order to get a list of \cil{VkQueueFamilyProperties}.
+		
+		Again, similar to \ril{ash::Instance::enumerate_physical_devices} discussed in the last section, Ash makes our life easy by giving us an \ril{impl} function on \ril{ash::Instance} which does performs the details of getting a list of \ril{vk_sys::QueueFamilyProperties}: \ril{ash::Instance::get_physical_device_queue_family_properties}. If you examine its source (recall how we found the source for \ril{ash::Instance::enumerate_physical_devices}) you'll see the similarities between the functions. Upon a successful call to \cil{get_physical_device_queue_family_properties}, we get a \ril{Vec<vk_sys::QueueFamilyProperties>}.
+		
+		What's inside C-ish \cil{vkQueueFamilyProperties}?
+	\begin{minted}{c}
 typedef struct VkQueueFamilyProperties {
 	VkQueueFlags    queueFlags;
 	uint32_t        queueCount;
@@ -276,36 +277,87 @@ typedef enum VkQueueFlagBits {
 	VK_QUEUE_TRANSFER_BIT = 0x00000004,
 	VK_QUEUE_SPARSE_BINDING_BIT = 0x00000008,
 } VkQueueFlagBits;
-\end{minted}
-
-	We'll only look at some of the members in detail for now:
-		\begin{itemize}
-			\item \cil{queueCount}: unsigned integer specifying how many queues this device has 
-			\item \cil{vkQueueFlags} is a bit mask of one or more \cil{VkQueueFlagBits} specifying the capabilities of the queues in this family (e.g. graphics queues specialize in handling graphics-related operations, while transfer queues specialize in transferring data between application and device).
-		\end{itemize}
+	\end{minted}
 	
-	The bit mask stuff is also important in Rust-land. Ash has a special type for the bits, \ril{ash::types::QueueFlags}, which allow bitwise operations on them too. So, here's what's going on with the bit mask stuff:
-		\begin{itemize}
-			\item converting from hexadecimal to binary:
-				\begin{align*}
-					\mathtt{0x1} &\rightarrow 000\underline{1} && \text{Graphics}\\
-					\mathtt{0x2} &\rightarrow 00\underline{1}0 && \text{Compute}\\
-					\mathtt{0x3} &\rightarrow 0\underline{1}00 && \text{Transfer}\\
-					\mathtt{0x4} &\rightarrow \underline{1}000 && \text{Sparse}
-				\end{align*}
-			
-			\item so if I gave you a flag "0xF", in binary that is $1111$, and this would mean that that queue family supports Graphics, Compute, Transfer, and Sparse operations
-			
-			\item but if I gave you "0x5", in binary that is $0101$, this would mean that the queue family only supports Graphics and Transfer operations
-		\end{itemize}
-	
-	To test whether a particular bit is set (i.e. is $1$), we can use the \ril{subset} \ril{impl} for \ril{ash::types::QueueFlags}. See how \ril{get_queue_family_supported_ops} function tests for this in "init-device.rs". 
-	
-	
-	
-	
-	
-	
-	
+		We'll only look at some of the members in detail for now:
+			\begin{itemize}
+				\item \cil{queueCount}: unsigned integer specifying how many queues this device has 
+				\item \cil{vkQueueFlags} is a bit mask of one or more \cil{VkQueueFlagBits} specifying the capabilities of the queues in this family (e.g. graphics queues specialize in handling graphics-related operations, while transfer queues specialize in transferring data between application and device).
+			\end{itemize}
 		
+		The bit mask stuff is also important in Rust-land. Ash has a special type for the bits, \ril{ash::types::QueueFlags}, which allow bitwise operations on them too. So, here's what's going on with the bit mask stuff:
+			\begin{itemize}
+				\item converting from hexadecimal to binary:
+					\begin{align*}
+						\mathtt{0x1} &\rightarrow 000\underline{1} && \text{Graphics}\\
+						\mathtt{0x2} &\rightarrow 00\underline{1}0 && \text{Compute}\\
+						\mathtt{0x3} &\rightarrow 0\underline{1}00 && \text{Transfer}\\
+						\mathtt{0x4} &\rightarrow \underline{1}000 && \text{Sparse}
+					\end{align*}
+				
+				\item so if I gave you a flag "0xF", in binary that is $1111$, and this would mean that that queue family supports Graphics, Compute, Transfer, and Sparse operations
+				
+				\item but if I gave you "0x5", in binary that is $0101$, this would mean that the queue family only supports Graphics and Transfer operations
+			\end{itemize}
+		
+		To test whether a particular bit is set (i.e. is $1$), we can use the \ril{subset} \ril{impl} for \ril{ash::types::QueueFlags}. See how \ril{get_queue_family_supported_ops} function tests for this in "init-device-0.rs". Also, note that before the program panics intentionally, care is taken to ensure that any instances we create are destroyed with the help of the \ril{unsafe} function \ril{destroy_instance_and_panic}.
+				
+		When you run "init-device-0.rs", you should see a print out of all the queue families supported by the first physical device in the list of physical devices available to you. 
+		
+	\subsection{\texttt{init-device-1.rs}}
+		In the last section, we described "init-device-0.rs", which allowed us to print out a list of queue families available for one physical device on our system. In "init-device-1", we will iterate upon "init-device-0", and choose a physical device which has a queue family with graphics capability (recall that the ultimate aim of the samples progression is to display a cube, which is undoubtedly a graphics operation).
+		
+		Once we choose the appropriate physical device, and the appropriate queue family from the device, we will set about creating a \emph{logical device}, which will have a queue from the queue family of interest. Here's a broad outline of the steps we'd follow if we were using the C-ish API:
+			\begin{enumerate}
+				\item fill out a \cil{VkDeviceQueueCreateInfo} "struct" based on queue family selected for each queue we want to create (i.e. we would form a list of such "struct"s)
+				
+				\item fill out a \cil{VkDeviceCreateInfo} "struct", which amongst other members, has \cil{pQueueCreateInfos}: a pointer to a list of \cil{VkDeviceQueueCreateInfo} "struct"s (one for each queue we want to create)
+				
+				\item call \cil{vkCreateDevice}, with the \cil{VkDeviceCreateInfo} "struct" we filled out as one of the "struct"s, to create a \cil{vkDevice} upon success
+				
+				\item perform any tasks we need to with the resulting \cil{vkDevice}
+				
+				\item destroy the device
+			\end{enumerate}
+		From now on in this tutorial, whenever you read \inquotes{device} without qualification, assume it means \inquotes{logical device}. I will always refer to a physical device as \inquotes{physical device}.
+		
+		Let's have a look at \cil{VkDeviceQueueCreateInfo}:
+\begin{minted}{c}
+typedef struct VkDeviceQueueCreateInfo {
+	VkStructureType             sType;
+	const void*                 pNext;
+	VkDeviceQueueCreateFlags    flags;
+	uint32_t                    queueFamilyIndex;
+	uint32_t                    queueCount;
+	const float*                pQueuePriorities;
+} VkDeviceQueueCreateInfo;
+\end{minted}
+		Relevant members of this "struct" are:
+			\begin{itemize}
+				\item \cil{flags}: for future (as in, future versions of Vulkan) use, set to 0 in the present
+				
+				\item \cil{queueFamilyIndex}: the index of the queue's queue family properties in the list of \cil{vkQueueFamilyProperties} for the physical device we will create a logical device for;
+				
+				\item \cil{queueCount}: the number of queues we'd like to create (shouldn't be greater than the number of queues supported by the physical device for this queue's queue family properties!)
+				
+				\item \cil{pQueuePriorities}: a list of \cil{queueCount} normalized floating point values (i.e. "float"s between 0.0 and 1.0), denoting the relative priority of each queue we're creating. Higher values indicate a higher priority (0.0 is lowest, 1.0 is highest), and within the physical device, queues with higher priority will have a higher chance of being allotted more processing time than queues with lower priority; more on this later
+			\end{itemize}
+		
+		Let's have a look at \cil{}:
+\begin{minted}{c}
+typedef struct VkDeviceCreateInfo {
+VkStructureType                    sType;
+const void*                        pNext;
+VkDeviceCreateFlags                flags;
+uint32_t                           queueCreateInfoCount;
+const VkDeviceQueueCreateInfo*     pQueueCreateInfos;
+uint32_t                           enabledLayerCount;
+const char* const*                 ppEnabledLayerNames;
+uint32_t                           enabledExtensionCount;
+const char* const*                 ppEnabledExtensionNames;
+const VkPhysicalDeviceFeatures*    pEnabledFeatures;
+} VkDeviceCreateInfo;
+\end{minted}
+		
+		 
 \end{document}
