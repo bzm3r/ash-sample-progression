@@ -22,7 +22,7 @@ fn main() {
 
         println!("{} pdevices found.", pdevices.len());
         if pdevices.len() == 0 {
-            destroy_instance_and_panic("No physical devices found!", instance)
+            destroy_instance_and_panic("No physical devices found!", instance);
         }
 
         println!("Selecting the very first device...");
@@ -32,7 +32,7 @@ fn main() {
         let queue_family_properties = instance.get_physical_device_queue_family_properties(pdevice);
 
         if queue_family_properties.len() == 0 {
-            destroy_instance_and_panic("No queue families found!", instance)
+            destroy_instance_and_panic("No queue families found!", instance);
         }
 
         for (index, ref qfp_info) in queue_family_properties.iter().enumerate() {
@@ -90,7 +90,7 @@ fn init_instance() -> Instance<V1_0> {
 }
 
 
-fn destroy_instance_and_panic(message: &str, instance: Instance<V1_0>) -> ! {
+unsafe fn destroy_instance_and_panic(message: &str, instance: Instance<V1_0>) -> ! {
     instance.destroy_instance(None);
     panic!("panic: {}", message);
 }
