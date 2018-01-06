@@ -11,6 +11,7 @@ use ash::version::{EntryV1_0, InstanceV1_0, V1_0};
 
 // code is a Rust version of: https://github.com/LunarG/VulkanSamples/blob/master/API-Samples/02-enumerate_devices/02-enumerate_devices.cpp
 // please look at ash-tutorial.pdf for further information!
+
 fn main() {
     unsafe {
         let instance: Instance<V1_0> = init_instance();
@@ -20,10 +21,28 @@ fn main() {
                     .expect("Physical device error");
 
         println!("{} pdevices found.", pdevices.len());
-        assert!(pdevices.len() > 0);
+        if pdevices.len() == 0 {
+            destroy_instance_and_panic("No physical devices found!", instance)
+        }
 
+        println!("Selecting the very first device...");
         let pdevice = pdevices[0];
-        let q_family_properties = instance.get_physical_device_queue_family_properties(*pdevice);
+
+        println!("Getting list of queue families available...");
+        let queue_family_properties = instance.get_physical_device_queue_family_properties(pdevice);
+
+        if queue_family_properties.len() == 0 {
+            destroy_instance_and_panic("No queue families found!", instance)
+        }
+
+        for (index, ref qfp_info) in queue_family_properties.iter().enumerate() {
+            println!("=========");
+            print!("index: {}\n\
+                    num queues: {}\n\
+                    supported operations: {}\n", 
+                    index, qfp_info.queue_count as u32, get_queue_family_supported_ops(qfp_info.queue_flags));
+        }
+        println!("=========");
 
         println!("Destroying instance...");
         instance.destroy_instance(None);
@@ -70,3 +89,27 @@ fn init_instance() -> Instance<V1_0> {
     }
 }
 
+
+fn destroy_instance_and_panic(message: &str, instance: Instance<V1_0>) -> ! {
+    instance.destroy_instance(None);
+    panic!("panic: {}", message);
+}
+
+fn get_queue_family_supported_ops(queue_flags: vk::types::QueueFlags) -> String {
+    let possible_ops: [(&str, vk::types::QueueFlags); 4] = [("GRAPHICS", vk::QUEUE_GRAPHICS_BIT), 
+                                                            ("COMPUTE", vk::QUEUE_COMPUTE_BIT), 
+                                                            ("TRANSFER", vk::QUEUE_TRANSFER_BIT),
+                                                            ("SPARSE", vk::QUEUE_SPARSE_BINDING_BIT)];
+    possible_ops
+        .iter()
+        .filter_map(
+            |&(op, bit)|
+
+            if queue_flags.subset(bit) == true {
+                Some(op)
+            } else {
+                None
+            })
+        .collect::<Vec<&str>>()
+        .join(", ")
+}
