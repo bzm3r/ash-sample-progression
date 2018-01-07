@@ -7,7 +7,8 @@ use std::ptr;
 use std::default::Default;
 use ash::Entry;
 use ash::Instance;
-use ash::version::{EntryV1_0, InstanceV1_0, V1_0};
+use ash::Device;
+use ash::version::{DeviceV1_0, EntryV1_0, InstanceV1_0, V1_0};
 
 // code is a Rust version of: https://github.com/LunarG/VulkanSamples/blob/master/API-Samples/02-enumerate_devices/02-enumerate_devices.cpp
 // please look at ash-tutorial.pdf for further information!
@@ -25,15 +26,15 @@ fn main() {
             destroy_instance_and_panic("No physical devices found!", instance);
         }
 
-        let (pdevice, queue_family_index) = 
-        match find_relevant_pdevice_and_queue_family(instance, pdevices, vec![vk::QUEUE_GRAPHICS_BIT]) {
+        let (pdevice, queue_family_index): (vk::types::PhysicalDevice, usize) = 
+        match find_relevant_pdevice_and_queue_family(&instance, pdevices, vec![vk::QUEUE_GRAPHICS_BIT]) {
             Some(result) => result,
             None => {
                 destroy_instance_and_panic("Could not find a capable physical device!", instance);
             },
         };
 
-        let queue_family_properties = instance.get_physical_device_queue_family_properties(pdevice);
+        let qfp_info = &(instance.get_physical_device_queue_family_properties(pdevice))[queue_family_index];
         println!("Found a pdevice with capable queue family: ");
         print!("===========\n\
                 queue family index: {}\n\
@@ -41,8 +42,8 @@ fn main() {
                 supported operations: {}\n\
                 ===========\n", 
         queue_family_index, 
-        queue_family_properties[queue_family_index].queue_count as u32, 
-        get_queue_family_supported_ops(queue_family_properties[queue_family_index]));
+        qfp_info.queue_count as u32, 
+        get_queue_family_supported_ops(qfp_info.queue_flags));
 
         let priorities: [f32; 1] = [1.0];
         let queue_info = vk::DeviceQueueCreateInfo {
@@ -68,11 +69,14 @@ fn main() {
         };
 
         let device: Device<V1_0> = match instance.create_device(pdevice, &device_create_info, None) {
-            Some(device) => {
+            Ok(device) => {
                 println!("Successfully created logical device.");
+                device
             },
-            None => destroy_instance_and_panic("Could not create logical device!", instance),
-        }
+            Err(error) => {
+                destroy_instance_and_panic(&format!("failed to create logical device: {:?}", error), instance);
+            }
+        };
 
         println!("Destroying device...");
         device.destroy_device(None);
@@ -147,28 +151,29 @@ fn get_queue_family_supported_ops(queue_flags: vk::types::QueueFlags) -> String 
         .join(", ")
 }
 
-fn find_relevant_pdevice_and_queue_family(instance: vk::Instance<V1_0>, 
+fn find_relevant_pdevice_and_queue_family(instance: &Instance<V1_0>, 
     pdevices: Vec<vk::types::PhysicalDevice>, 
     required_capabilities: Vec<vk::types::QueueFlags>) 
-    -> Option<(vk::types::PhysicalDevice, u32)> {
-pdevice, queue_family_properties, queue_family_index
+    -> Option<(vk::types::PhysicalDevice, usize)> {
 
     pdevices
-        .iter()
-        .map(|pdevice|
-            instance.
-                get_physical_device_queue_family_properties(*pdevice)
-                .iter()
-                .enumerate()
-                .filter_map(|index, ref qfp| {
-                    let has_required_capabilities: bool = required_capabilities
-                        .iter()
-                        .all(|req_bit| qfp.queue_flags.subset(req_bit));
+    .iter()
+    .map(|pdevice|
+        instance
+            .get_physical_device_queue_family_properties(*pdevice)
+            .iter()
+            .enumerate()
+            .filter_map(|(index, qfp)| {
+                let has_required_capabilities: bool = required_capabilities
+                    .iter()
+                    .all(|&req_bit| qfp.queue_flags.subset(req_bit));
 
-                    match has_required_capabilities {
-                        true => Some((*pdevice, index)),
-                        false => None,
-                    }
-                }))
-        .nth(0)
+                match has_required_capabilities {
+                    true => Some((*pdevice, index)),
+                    false => None,
+                }
+            })
+            .nth(0))
+    .filter_map(|r| r)
+    .nth(0)
 }
