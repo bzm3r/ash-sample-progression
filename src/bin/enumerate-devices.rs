@@ -15,9 +15,12 @@ fn main() {
     unsafe {
         let instance: Instance<V1_0> = init_instance();
 
-        let pdevices = instance
-                    .enumerate_physical_devices()
-                    .expect("Physical device error");
+        let pdevices = match instance.enumerate_physical_devices() {
+            Ok(pdevices) => pdevices,
+            Err(error) => {
+                destroy_instance_and_panic(&format!("failed to create pdevices: {:?}", error), instance);
+            },
+        };
 
         println!("{} pdevices found.", pdevices.len());
 
@@ -64,5 +67,10 @@ fn init_instance() -> Instance<V1_0> {
 
         instance
     }
+}
+
+unsafe fn destroy_instance_and_panic(message: &str, instance: Instance<V1_0>) -> ! {
+    instance.destroy_instance(None);
+    panic!("panic: {}", message);
 }
 

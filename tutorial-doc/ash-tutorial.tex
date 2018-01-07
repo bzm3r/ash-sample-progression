@@ -32,7 +32,7 @@
 
 \begin{document}
 
-\title{Using Vulkan with Rust via Ash: A Samples Tutorial}
+\title{Using Vulkan with Rust via "ash": A Samples Tutorial}
 \date{0.1}
 \author{Brian Merchant}
 \maketitle
@@ -51,7 +51,7 @@
 \section{A note about C-ish for those unfamiliar with it}
 	C-ish my catchall term for C/C++. For some parts of this guide, I am going to assume you know the following (and I think you would not need more than an hour to figure these things out):
 		\begin{itemize}
-			\item how \href{https://en.wikibooks.org/wiki/C_Programming/Advanced_data_types}{"struct"s and "enum"s defined in C-ish, and what \cil{typdef}} does
+			\item how \href{https://en.wikibooks.org/wiki/C_Programming/Arrays_and_strings}{arrays}, \href{https://en.wikibooks.org/wiki/C_Programming/Advanced_data_types}{"struct"s and "enum"s} defined in C-ish, and what th keyword \href{https://en.wikibooks.org/wiki/C_Programming/Advanced_data_types}{\cil{typdef}} does
 			
 			\item what a \href{https://en.wikibooks.org/wiki/C_Programming/Pointers_and_arrays}{pointer} is, and how it is related to C-ish \href{https://en.wikibooks.org/wiki/C_Programming/Pointers_and_arrays#Pointers_and_Arrays}{arrays}
 			
@@ -73,7 +73,7 @@
 	
 	I think these are good things to know, since you're dealing with a Rust crate that is a wrapper around a C-ish interface. A lot of the documentation on Vulkan is in C-ish, and this documentation is good to read because:
 		\begin{itemize}
-			\item it tells you what C-ish analogues you need to look for in the Ash source code/documentation, when exploring Ash
+			\item it tells you what C-ish analogues you need to look for in the "ash" source code/documentation, when exploring "ash"
 			
 			\item lets you read the basics of Vulkan tutorials that operate in C-ish, in case you need to read about some stuff outside the scope of this tutorial
 		\end{itemize}
@@ -94,7 +94,7 @@ Note that the driver doesn't do anything beyond helping Vulkan pass instructions
 
 Let's now take a closer look at the loader, which is more specifically called an \inquotes{instance}. When you first create the instance, it searches your system for physical devices with Vulkan-compatible drivers, and enumerates these for you, so that you can choose which physical device(s) you would like to work with. Once you have chosen specific physical devices, you can describe more specifically which features of each physical device you would like to use (e.g. 64-bit floats, or 32-bit floats?). Each physical device can then be abstracted into \inquotes{logical devices}, which is a software represent subsets of a physical device's resources. For example, let us say your application needs to do some graphics calculations, and some simulation related calculations: so to organize your physical device(s)' computing resources, you could set one logical device to deal with the graphics, and the other logical device could be set to deal with calculations. Thus, specification of logical devices is an abstraction that helps you organize computing resources. Each logical device allows you to create \inquotes{queues}, which are selected from \inquotes{queue families}. Queues organize the communication of data from your application (e.g. computation instructions, or some data to be manipulated) to the physical device's driver, and they also organize communication of data from your physical device to your application (e.g. results of computations, or status of the physical device's computing efforts). Queue families represent specialization of queues: queues to handle data (memory) transfers, queues to handle instruction transfer, etc. Note that sometimes, only certain queue families may be available on certain physical devices (and their availability may indicate what role the physical device is specialized for), but common physical devices tend to support all commonly used queue families. Finally, we may also take advantage of functionality provided by Vulkan \inquotes{extensions}, which are API extensions that provide common functionality for some often-occurring Vulkan use-cases (e.g. graphics display).
 
-We are interested in using Rust to write our application, but the Vulkan API is written in C, so we use \href{https://github.com/MaikKlein/ash}{Ash}, which is a lightweight (thus unsafe) Rust wrapper around Vulkan. This document will teach you how to use Vulkan through Ash, by helping you build a series of small programs (\inquotes{samples}) which iterate upon each other towards a final product (displaying a cube). 
+We are interested in using Rust to write our application, but the Vulkan API is written in C, so we use \href{https://github.com/MaikKlein/"ash"}{"ash"}, which is a lightweight (thus unsafe) Rust wrapper around Vulkan. This document will teach you how to use Vulkan through "ash", by helping you build a series of small programs (\inquotes{samples}) which iterate upon each other towards a final product (displaying a cube). 
 
 \section{An Overview of Vulkan's Abstraction System over Physical Devices: Instances, Logical Devices and Queues}
 
@@ -175,7 +175,7 @@ typedef struct VkApplicationInfo {
 			\item \cil{apiVersion}:  this field communicates the major, minor, and patch levels of the Vulkan API used by the application; we'll be using "VK\_API\_VERSION\_1\_0" (major is "1", minor is "0").
 		\end{itemize}
 	
-	With these prototypes in mind, let's see how we can use Vulkan through Ash. Open up "/init-instance/src/main.rs", and:
+	With these prototypes in mind, let's see how we can use Vulkan through "ash". Open up "/init-instance/src/main.rs", and:
 		\begin{itemize}
 			\item note comments explaining what \ril{use} statements, if you need some clarification
 			
@@ -185,11 +185,11 @@ typedef struct VkApplicationInfo {
 			
 			\item note how \ril{vk::StructureType} is used to fill out \ril{s_type} fields
 			
-			\item can you explain how the \ril{flags} field is filled out? (hint: look up the definition of the \ril{vk::InstanceCreateInfo} "struct" in \href{https://docs.rs/ash}{Ash's documentation} and then answer: what type is \ril{flags}? How is the \ril{std::Default} trait implemented for it?)
+			\item can you explain how the \ril{flags} field is filled out? (hint: look up the definition of the \ril{vk::InstanceCreateInfo} "struct" in \href{https://docs.rs/"ash"}{"ash"'s documentation} and then answer: what type is \ril{flags}? How is the \ril{std::Default} trait implemented for it?)
 			
-			\item to actually use Vulkan, we first initialize an \ril{ash::Entry} "struct" which contains the supporting infrastructure to allow Rust to interface with Vulkan's C implementation
+			\item to actually use Vulkan, we first initialize an \ril{"ash"::Entry} "struct" which contains the supporting infrastructure to allow Rust to interface with Vulkan's C implementation
 			
-			\item the \ril{ash::Entry} "struct" also has some \ril{impl}s which put syntactic sugar around calling functions like \ril{vkCreateInstance}, in particular the function \ril{create_instance}---can you find where that function is implemented? (hint: open up \href{https://docs.rs/ash}{Ash's documentation}, and 1) figure out where the \ril{EntryV1_0} trait is defined, 2) figure out where \ril{Entry<V>} is defined, and 3) how is the \ril{EntryV1_0} implemented for \ril{Entry<V1_0>}?)
+			\item the \ril{"ash"::Entry} "struct" also has some \ril{impl}s which put syntactic sugar around calling functions like \ril{vkCreateInstance}, in particular the function \ril{create_instance}---can you find where that function is implemented? (hint: open up \href{https://docs.rs/"ash"}{"ash"'s documentation}, and 1) figure out where the \ril{EntryV1_0} trait is defined, 2) figure out where \ril{Entry<V>} is defined, and 3) how is the \ril{EntryV1_0} implemented for \ril{Entry<V1_0>}?)
 			
 			\item note how we have to manually destroy the instance once we're done
 		\end{itemize} 
@@ -235,7 +235,7 @@ VkResult vkEnumeratePhysicalDevices(
 			\item call \cil{vkEnumeratePhysicalDevices(instance, pPhysicalDeviceCount, pPhysicalDevices}---if \cil{vkResult} indicates success, then our list \cil{pPhysicalDevices} should be properly filled out with the \cil{vkPhysicalDevice}s.
 		\end{enumerate}
 	
-	How would we do this in Rust? The \ril{ash::Instance} "struct" has an \ril{impl} function \ril{ash::Instance::enumerate_physical_devices}, which calls \cil{vkEnumeratePhysicalDevices} for us and returns a vector of \ril{vk::PhysicalDevice}s. Have a look at how it works: \href{https://gist.github.com/bzm3r/175cd2b63db8f783ed968df20462be67}{gist link for annotated \ril{enumerate_physical_devices}}. To find the source for yourself, go to Ash's documentation for \ril{ash::Instance}, and click the appropriate "[src]" links. You can see that under the hood, Ash follows exactly the pattern we noted above. 
+	How would we do this in Rust? The \ril{"ash"::Instance} "struct" has an \ril{impl} function \ril{"ash"::Instance::enumerate_physical_devices}, which calls \cil{vkEnumeratePhysicalDevices} for us and returns a vector of \ril{vk::PhysicalDevice}s. Have a look at how it works: \href{https://gist.github.com/bzm3r/175cd2b63db8f783ed968df20462be67}{gist link for annotated \ril{enumerate_physical_devices}}. To find the source for yourself, go to "ash"'s documentation for \ril{"ash"::Instance}, and click the appropriate "[src]" links. You can see that under the hood, "ash" follows exactly the pattern we noted above. 
 	
 	Have a look at "enumerate-devices.rs", where we query for the list of the physical devices on our system, and print out how many we found. So, to figure out how many physical devices are on your system run "enumerate-devices.rs": 
 		\begin{center}
@@ -260,7 +260,7 @@ VkResult vkEnumeratePhysicalDevices(
 			\end{minted}
 		Note that this function has the same organization as a function which can either give information about the number of some objects of interest, or provide a list of the same objects of interest. In the last section, we discussed how such a function would be used, and we simply need to repeat that process in order to get a list of \cil{VkQueueFamilyProperties}.
 		
-		Again, similar to \ril{ash::Instance::enumerate_physical_devices} discussed in the last section, Ash makes our life easy by giving us an \ril{impl} function on \ril{ash::Instance} which does performs the details of getting a list of \ril{vk_sys::QueueFamilyProperties}: \ril{ash::Instance::get_physical_device_queue_family_properties}. If you examine its source (recall how we found the source for \ril{ash::Instance::enumerate_physical_devices}) you'll see the similarities between the functions. Upon a successful call to \cil{get_physical_device_queue_family_properties}, we get a \ril{Vec<vk_sys::QueueFamilyProperties>}.
+		Again, similar to \ril{"ash"::Instance::enumerate_physical_devices} discussed in the last section, "ash" makes our life easy by giving us an \ril{impl} function on \ril{"ash"::Instance} which does performs the details of getting a list of \ril{vk_sys::QueueFamilyProperties}: \ril{"ash"::Instance::get_physical_device_queue_family_properties}. If you examine its source (recall how we found the source for \ril{"ash"::Instance::enumerate_physical_devices}) you'll see the similarities between the functions. Upon a successful call to \cil{get_physical_device_queue_family_properties}, we get a \ril{Vec<vk_sys::QueueFamilyProperties>}.
 		
 		What's inside C-ish \cil{vkQueueFamilyProperties}?
 	\begin{minted}{c}
@@ -285,7 +285,7 @@ typedef enum VkQueueFlagBits {
 				\item \cil{vkQueueFlags} is a bit mask of one or more \cil{VkQueueFlagBits} specifying the capabilities of the queues in this family (e.g. graphics queues specialize in handling graphics-related operations, while transfer queues specialize in transferring data between application and device).
 			\end{itemize}
 		
-		The bit mask stuff is also important in Rust-land. Ash has a special type for the bits, \ril{ash::types::QueueFlags}, which allow bitwise operations on them too. So, here's what's going on with the bit mask stuff:
+		The bit mask stuff is also important in Rust-land. "ash" has a special type for the bits, \ril{"ash"::types::QueueFlags}, which allow bitwise operations on them too. So, here's what's going on with the bit mask stuff:
 			\begin{itemize}
 				\item converting from hexadecimal to binary:
 					\begin{align*}
@@ -300,7 +300,7 @@ typedef enum VkQueueFlagBits {
 				\item but if I gave you "0x5", in binary that is $0101$, this would mean that the queue family only supports Graphics and Transfer operations
 			\end{itemize}
 		
-		To test whether a particular bit is set (i.e. is $1$), we can use the \ril{subset} \ril{impl} for \ril{ash::types::QueueFlags}. See how \ril{get_queue_family_supported_ops} function tests for this in "init-device-0.rs". Also, note that before the program panics intentionally, care is taken to ensure that any instances we create are destroyed with the help of the \ril{unsafe} function \ril{destroy_instance_and_panic}.
+		To test whether a particular bit is set (i.e. is $1$), we can use the \ril{subset} \ril{impl} for \ril{"ash"::types::QueueFlags}. See how \ril{get_queue_family_supported_ops} function tests for this in "init-device-0.rs". Also, note that before the program panics intentionally, care is taken to ensure that any instances we create are destroyed with the help of the \ril{unsafe} function \ril{destroy_instance_and_panic}.
 				
 		When you run "init-device-0.rs", you should see a print out of all the queue families supported by the first physical device in the list of physical devices available to you. 
 		
@@ -343,7 +343,7 @@ typedef struct VkDeviceQueueCreateInfo {
 				\item \cil{pQueuePriorities}: a list of \cil{queueCount} normalized floating point values (i.e. "float"s between 0.0 and 1.0), denoting the relative priority of each queue we're creating. Higher values indicate a higher priority (0.0 is lowest, 1.0 is highest), and within the physical device, queues with higher priority will have a higher chance of being allotted more processing time than queues with lower priority; more on this later
 			\end{itemize}
 		
-		Let's have a look at \cil{}:
+		Let's have a look at the \cil{VkDeviceCreateInfo} "struct":
 \begin{minted}{c}
 typedef struct VkDeviceCreateInfo {
 VkStructureType                    sType;
@@ -358,6 +358,25 @@ const char* const*                 ppEnabledExtensionNames;
 const VkPhysicalDeviceFeatures*    pEnabledFeatures;
 } VkDeviceCreateInfo;
 \end{minted}
+		Relevant members are:
+			\begin{itemize}
+				\item \cil{queueCreateInfoCount}: how many queue groups are going to be associated with this logical device (each group will have its own \cil{vkDeviceQueueCreateInfo} "struct")
+				
+				\item \cil{pQueueCreateInfos}: list of \cil{vkDeviceQueueCreateInfo} "struct"s 
+				(count given by \cil{queueCreateInfoCount})
+				
+				\item \cil{enabledLayerCount} and \cil{ppEnabledLayerNames}: deprecated and ignored
+				
+				\item \cil{enabledExtensionCount} and \cil{ppEnabledExtensionNames}: to be discussed later, for now we'll put in \cil{0} and \cil{NULL} respectively
+				
+				\item \cil{pEnabledFeatures}: to be discussed later, \cil{NULL} for now
+			\end{itemize}
+		Already we are getting hints of more advanced features available to us, such as Vulkan API extensions which can add functionality to the API in order to handle specialized tasks, or physical device features (e.g. 64 bit capability). We won't be worrying about these advanced features for now.
+		
+		The analogues of \cil{VkDeviceQueueCreateInfo} and \cil{VkDeviceCreateInfo} in "ash" are \ril{vk::DeviceQueueCreateInfo} (\href{https://docs.rs/ash/0.20.2/ash/vk/types/struct.DeviceQueueCreateInfo.html}{docs}) and \ril{vk::DeviceCreateInfo} (\href{https://docs.rs/ash/0.20.2/ash/vk/types/struct.DeviceCreateInfo.html}{docs}) respectively. In "init-device-1.rs", we select a physical device which has a queue family with graphics capability, fill out \ril{vk::DeviceQueueCreateInfo} and \ril{vk::DeviceCreateInfo} respectively, and then call \ril{ash::Instance::create_device} to create a device. Upon exit, we clean up by destroying the created device, and the instance. Make sure to study the code in "init-device-1.rs" and then run it:
+			\begin{center}
+				"cargo run --bin init-device-1"
+			\end{center}
 		
 		 
 \end{document}
