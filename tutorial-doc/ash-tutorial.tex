@@ -162,7 +162,7 @@ typedef struct VkInstanceCreateInfo {
 		\begin{itemize}
 			\item \cil{sType}: indicates the type of the info "struct", in this case \cil{VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO}---this is useful because in C, you might sometimes get a typeless (\cil{void*}) pointer to a particular "struct", and to determine what kind of "struct" it is, you could query the \cil{sType} field
 			
-			\item \cil{pNext}: another typical info "struct" member, usually set to \cil{NULL}, and can be used to pass additional "struct"s (whose type will be defined by the \cil{sType} field), sometimes needed by API extensions
+			\item \cil{pNext}: another typical info "struct" member, usually set to \cil{NULL}, and can be used to pass additional "struct"s (whose type will be defined by the \cil{sType} field)---this is only used by API extensions, and not the core Vulkan API!
 			
 			\item \cil{flags}: currently no flags defined, set to "0"
 			
@@ -397,7 +397,7 @@ const VkPhysicalDeviceFeatures*    pEnabledFeatures;
 		
 		The analogues of \cil{VkDeviceQueueCreateInfo} and \cil{VkDeviceCreateInfo} in "ash" are \ril{vk::DeviceQueueCreateInfo} (\href{https://docs.rs/ash/0.20.2/ash/vk/types/struct.DeviceQueueCreateInfo.html}{docs}) and \ril{vk::DeviceCreateInfo} (\href{https://docs.rs/ash/0.20.2/ash/vk/types/struct.DeviceCreateInfo.html}{docs}) respectively. In "init-device-1.rs", we select a physical device which has a queue family with graphics capability, fill out \ril{vk::DeviceQueueCreateInfo} and \ril{vk::DeviceCreateInfo} respectively, and then call \ril{ash::Instance::create_device} to create a device. Upon exit, we clean up by destroying the created device, and the instance. 
 		
-		Do note one important thing: we are only making one queue in the example, but if we were making more than one queue, we would not pass the \ril{vk::DeviceQueueCreateInfo} "struct" an array or a vector of \ril{vk::DeviceQueueCreateInfo}s for the member \ril{p_queue_create_infos}. Instead, you would pass a series of \ril{vk::DeviceQueueCreateInfo} "struct"s by filling out their \cil{pNext} pointers so that 
+		Do note one important thing: we are only making one queue in the example, but if we were making more than one queue, we would provide either a Rust array or vector of \ril{vk::DeviceQueueCreateInfo} with \ril{.as_ptr}. This provides a C-ish style list of objects, which can be accessed by offsetting the pointer.
 		
 		Make sure to study the code in "init-device-1.rs" and then run it:
 			\begin{center}
