@@ -1,0 +1,9 @@
+\contentsline {section}{\numberline {}Setup}{1}{section.1}
+\contentsline {section}{\numberline {}A note about C-ish for those unfamiliar with it}{1}{section.2}
+\contentsline {section}{\numberline {}Introduction}{2}{section.3}
+\contentsline {section}{\numberline {}Instances, Logical Devices and Queues}{4}{section.4}
+\contentsline {section}{\numberline {}\texttt {init-instance.rs}}{4}{section.5}
+\contentsline {section}{\numberline {}\texttt {enumerate-devices.rs}}{6}{section.6}
+\contentsline {section}{\numberline {}\texttt {init-device.rs}}{8}{section.7}
+\contentsline {subsection}{\numberline {7.1}\texttt {init-device-0.rs}}{8}{subsection.7.1}
+\contentsline {subsection}{\numberline {7.2}\texttt {init-device-1.rs}}{10}{subsection.7.2}
