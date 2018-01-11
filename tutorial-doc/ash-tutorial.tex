@@ -404,5 +404,105 @@ const VkPhysicalDeviceFeatures*    pEnabledFeatures;
 				"cargo run --bin init-device-1"
 			\end{center}
 		
-		 
+\section{\texttt{init-command-buffer.rs}}
+	Unlike other APIs which send commands (memory transfer commands, draw commands, etc.) directly to the physical device's drivers, Vulkan records commands in a command buffer, which are then submitted using queues to the physical device's driver, which in turn handles the organization of the execution of instructions in the command buffer---in other words, Vulkan splits the recording of commands from the submission of commands. The benefit of such a system is that it allows drivers to better manage resources, since it has some idea of the work it is going to have to do.
+	
+	Creating and destroying individual command buffers can be expensive, Vulkan utilizes the abstraction of \inquotes{command buffer pools}, which manage the creation and destruction of command buffers more efficiently through the use of specialized pool allocators. Furthermore, pools can manage sending large groups of (small) command buffers with increased efficiency, as there are inefficiencies in sending small command buffers. It is important to note that a command buffer pool is associated with one particular queue family on some physical device, since the driver allocates pools based on details specified by queue family.
+	
+	To create a command buffer pool, we need to fill out a \cil{vkCommandPoolCreateInfo} "struct", and then submit it to a \cil{vkCreateCommandPool} function. Let's have a look at \cil{vkCommandPoolCreateInfo}:
+	\begin{minted}{c}
+typedef struct VkCommandPoolCreateInfo {
+	VkStructureType             sType;
+	const void*                 pNext;
+	VkCommandPoolCreateFlags    flags;
+	uint32_t                    queueFamilyIndex;
+	} VkCommandPoolCreateInfo;
+	\end{minted}
+		\begin{itemize}
+			\item \cil{sType}: set to \cil{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO}
+			
+			\item \cil{pNext}: typical info "struct" member
+			
+			\item \cil{flags}: a bitmask of \cil{VkCommandPoolCreateFlagBits} indicating pool usage and behaviour attributes. Possible bits are:
+				\begin{itemize}
+					\item \cil{VK_COMMAND_POOL_CREATE_TRANSIENT_BIT} (0x1): command buffers allocated from the pool will be short-lived
+					
+					\item \cil{VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT} (0x2): when a command buffer is first allocated is in the initial state, and command pools with the reset bit set allow buffers from the pool to be reset to their initial state
+				\end{itemize}
+			
+			\item \cil{queueFamilyIndex}: index of the queue family that the command pool will be associated with (queue families are associated with a particular device, and the device in question is specified when calling \cil{vkCreateCommandPool})
+		\end{itemize}
+	Let's have a look at the function prototype for \cil{vkCreateCommandPool}:
+		\begin{minted}{c}
+VkResult vkCreateCommandPool(
+	VkDevice                                    device,
+	const VkCommandPoolCreateInfo*              pCreateInfo,
+	const VkAllocationCallbacks*                pAllocator,
+	VkCommandPool*                              pCommandPool)
+		\end{minted}
+		\begin{itemize}
+			\item \cil{device}: logical device that will create the command pool
+			
+			\item \cil{pCreateInfo}: a pointer to a filled out \cil{vkCreateCommandPool} "struct"
+			
+			\item \cil{pAllocator}: standard input described in earlier sections
+			
+			\item \cil{pCommandPool}: a pointer to a \cil{vkCommandPool}, which \cil{vkCreateCommandPool} will associate with the newly created pool
+		\end{itemize}
+	In a previous section, we identified a graphics capable queue family, and will associate our command pool with it.
+	
+	Once we have a command pool we store it in a \cil{VkCommandBufferAllocateInfo} "struct", which we can use along with a \cil{vkAllocateCommandBuffers} call to create (allocate) command buffers. Let's have a look at \cil{VkCommandBufferAllocateInfo}:
+		\begin{minted}{c}
+typedef struct VkCommandBufferAllocateInfo {
+	VkStructureType         sType;
+	const void*             pNext;
+	VkCommandPool           commandPool;
+	VkCommandBufferLevel    level;
+	uint32_t                commandBufferCount;
+	} VkCommandBufferAllocateInfo;
+		\end{minted}
+		\begin{itemize}
+			\item \cil{sType}: set to \cil{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO}
+			
+			\item \cil{pNext}: standard info "struct" member
+			
+			\item \cil{commandPool}: command pool that we created
+			
+			\item \cil{level}: the "enum" \cil{VkCommandBufferLevel} has values \cil{VK_COMMAND_BUFFER_LEVEL_PRIMARY} and \cil{VK_COMMAND_BUFFER_LEVEL_SECONDARY}, which specify whether this command buffer is primary or secondary. A primary command buffer can be submitted to a queue but cannot be called by another command buffer, while a secondary command buffer cannot be submitted to a queue, but can be called by another command buffer. 
+			
+			\item \cil{commandBufferCount}: how many buffers to make with these settings
+		\end{itemize}
+	Let's have a look at the function pointer for \cil{vkAllocateCommandBuffers}:
+		\begin{minted}{c}
+VkResult vkAllocateCommandBuffers(
+	VkDevice                                    device,
+	const VkCommandBufferAllocateInfo*          pAllocateInfo,
+	VkCommandBuffer*                            pCommandBuffers);
+		\end{minted}
+		\begin{itemize}
+			\item \cil{vkDevice}: the device with which the command pool is associated
+			
+			\item \cil{pAllocateInfo}: pointer to a filled out \cil{VkCommandBufferAllocateInfo} struct
+			
+			\item \cil{VkCommandBuffer}: a pointer to an array of \cil{VkCommandBuffer}s where the newly created command buffers will be stored (so, the array should have length at least \cil{commandBufferCount} set in the \cil{VkCommandBufferAllocateInfo} "struct")
+		\end{itemize}
+	Note that once a command pool is created, it must also be destroyed.
+	
+	Let's now turn our attention to Rust and \ash, where we'd follow (similar to C-ish) the following steps to create a command pool, and then command buffers associated with that pool:
+		\begin{enumerate}
+			\item we store info used to create a command pool in a \ril{vk::CommandPoolCreateInfo} "struct"
+			
+			\item a logical device (with type \ril{Device<V1_0>} in our tutorial so far) has an \ril{impl} \ril{create_command_pool} for creating a command pool
+			
+			\item we store info used to allocate command buffers in a \ril{vk::CommandBufferAllocateInfo} "struct"
+			
+			\item a logical device (with type \ril{Device<V1_0>} in our tutorial so far) has an \ril{impl} \ril{allocate_command_buffers} for allocating buffers
+			
+			\item use command pool as necessary
+			
+			\item destroy command pool with a logical device's (with type \ril{Device<V1_0>} in our tutorial so far) \ril{impl} \ril{destroy_command_pool}
+		\end{enumerate}
+	In "init-command-buffer.rs", you can see how these steps are straightforwardly executed using \ash. However, note that our clean ups are becoming more complicated and have a look at the new function \ril{clean_up}. 
+	
+	In coming sections, we will record commands to command buffers, but note that recording commands in the buffer does not make the GPU do anything until the command buffer is submitted using a \cil{vkQueueSubmit} call. We have much to do before we will make this call, which will be made in the last part of this tutorial series.
 \end{document}

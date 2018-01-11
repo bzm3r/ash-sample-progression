@@ -7,3 +7,4 @@
 \contentsline {section}{\numberline {}\texttt {init-device.rs}}{8}{section.7}
 \contentsline {subsection}{\numberline {7.1}\texttt {init-device-0.rs}}{8}{subsection.7.1}
 \contentsline {subsection}{\numberline {7.2}\texttt {init-device-1.rs}}{10}{subsection.7.2}
+\contentsline {section}{\numberline {}\texttt {init-command-buffer.rs}}{12}{section.8}
