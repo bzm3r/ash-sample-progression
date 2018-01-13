@@ -51,6 +51,10 @@
 
 \newcommand{\ash}{\texttt{ash}}
 
+%============ BIBLIOGRAPHY =============
+\addbibresource{bibliography.bib}
+%=======================================
+
 \begin{document}
 
 \title{Using Vulkan with Rust via "ash"}
@@ -505,4 +509,31 @@ VkResult vkAllocateCommandBuffers(
 	In "init-command-buffer.rs", you can see how these steps are straightforwardly executed using \ash. However, note that our clean ups are becoming more complicated and have a look at the new function \ril{clean_up}. 
 	
 	In coming sections, we will record commands to command buffers, but note that recording commands in the buffer does not make the GPU do anything until the command buffer is submitted using a \cil{vkQueueSubmit} call. We have much to do before we will make this call, which will be made in the last part of this tutorial series.
+	
+\section{\texttt{init-swapchain.rs}}
+	In this section, we'll learn how to initialize the \inquotes{swap chain}, sometimes also written as \inquotes{swapchain}. What is a swap chain? Well, Wikipedia says it best\autocite{wiki:swap-chain}:
+		\indenttext{In computer graphics, a swap chain is a series of virtual framebuffers utilized by the graphics card and graphics API [in our case, Vulkan] for frame rate stabilization and several other functions. The swap chain usually exists in graphics memory, but it can exist in system memory as well. The non-utilization of a swap chain may result in stuttering rendering, but its existence and utilization are required by many graphics APIs...In every swap chain there are at least two buffers. The first framebuffer, the screenbuffer, is the buffer that is rendered to the output of the video card. The remaining buffers are known as backbuffers. Each time a new frame is displayed, the first backbuffer in the swap chain takes the place of the screenbuffer, this is called presentation or swapping...}(see also Figure \ref{fig:swap-chain-depiction})
+			\begin{figure}
+				\centering
+				\includegraphics[width=0.7\linewidth]{fig:swap-chain-depiction}
+				\caption{An abstract depiction of the swap chain. \href{https://en.wikipedia.org/wiki/File:Swap_chain_depiction.svg}{Source.}}
+				\label{fig:swap-chain-depiction}
+			\end{figure}
+
+	So, the output of the graphics device is buffered through the use of swap chains, in order to give the end-user the illusion that rendering is smooth, by making the frames appear one after the other at a constant, rather than variable rate.
+	
+	So, how do we initialize swap chains using Vulkan?  
+
+\section{Thanks (in construction)}
+	The information of this tutorial was derived from multiple sources (\inquotes{"<search engine> is your best friend!"}), but some stand prominent amongst them. Grateful thanks is the least that is owed to those on this surely incomplete list:
+		\begin{enumerate}
+			\item \href{https://vulkan.lunarg.com/doc/sdk/1.0.65.1/windows/tutorial/html/index.html}{LunarG's Vulkan Samples Progression}, whose progression structure I found comforting, and thus stole, along with some conceptual explanations. 
+			
+			\item Alexander Overvoorde's \href{https://vulkan-tutorial.com/}{Vulkan Tutorial}, whose rich coverage often provided some clues on things other's assumed a beginner would know---this tutorial does not even come close to covering the range of material Overvoorde's tutorial does.
+			
+			\item \href{Maik Klein}{https://github.com/MaikKlein}, who began writing \ash, and is its prime contributor. Also, Maik and \href{https://github.com/msiglreith}{msiglreith} on \ash's Gitter were happy to answer my questions.
+			
+			\item The Rust organization and community.
+		\end{enumerate}
+\printbibliography
 \end{document}
