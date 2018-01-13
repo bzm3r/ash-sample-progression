@@ -522,10 +522,10 @@ VkResult vkAllocateCommandBuffers(
 
 	So, the output of the graphics device is buffered through the use of swap chains, in order to give the end-user the illusion that rendering is smooth, by making the frames appear one after the other at a constant, rather than variable rate.
 	
-	So, how do we initialize swap chains using Vulkan?  
+	It is the \inquotes{windowing system} (e.g. X Window System, MS Windows, Wayland) which is responsible for displaying the data stored in a swap chain, by providing us with a \inquotes{surface} abstraction onto which data is drawn. Note that the windowing system is separate from the core Vulkan API, but Vulkan provides official (Khronos Group maintained) extensions which   
 
 \section{Thanks (in construction)}
-	The information of this tutorial was derived from multiple sources (\inquotes{"<search engine> is your best friend!"}), but some stand prominent amongst them. Grateful thanks is the least that is owed to those on this surely incomplete list:
+	The information of this tutorial was derived from multiple sources (\inquotes{"<search engine> is your best friend!"}), but some stand prominent amongst them. Grateful thanks is the least that is owed to those on this surely incomplete (and thus, expanding) list:
 		\begin{enumerate}
 			\item \href{https://vulkan.lunarg.com/doc/sdk/1.0.65.1/windows/tutorial/html/index.html}{LunarG's Vulkan Samples Progression}, whose progression structure I found comforting, and thus stole, along with some conceptual explanations. 
 			
@@ -533,7 +533,7 @@ VkResult vkAllocateCommandBuffers(
 			
 			\item \href{Maik Klein}{https://github.com/MaikKlein}, who began writing \ash, and is its prime contributor. Also, Maik and \href{https://github.com/msiglreith}{msiglreith} on \ash's Gitter were happy to answer my questions.
 			
-			\item The Rust organization and community.
+			\item The Rust organization and community, and the Khronos Group who designed the Vulkan API, and helps maintain it.
 		\end{enumerate}
 \printbibliography
 \end{document}

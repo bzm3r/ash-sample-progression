@@ -84,7 +84,7 @@ fn main() {
         let pool_create_info = vk::CommandPoolCreateInfo {
             s_type: vk::StructureType::CommandPoolCreateInfo,
             p_next: ptr::null(),
-            flags: vk::COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+            flags: vk::CommandPoolCreateFlags::empty(),
             queue_family_index: queue_family_index as u32,
         };
 
