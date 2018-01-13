@@ -69,6 +69,8 @@
 \section{Setup}
 	Make sure:
 		\begin{enumerate}
+			\item you read the Wikipedia pages regarding Vulkan and Khronos, for general background and historical information (which can often come in handy in surprising ways!)
+			
 			\item you have the rust compiler installed: \href{https://www.rust-lang.org}{https://www.rust-lang.org} (I am going to assume you've gone through the basics of Rust)
 			
 			\item you have the Vulkan SDK installed: \href{https://www.lunarg.com/vulkan-sdk/}{https://www.lunarg.com/vulkan-sdk/}
@@ -522,7 +524,11 @@ VkResult vkAllocateCommandBuffers(
 
 	So, the output of the graphics device is buffered through the use of swap chains, in order to give the end-user the illusion that rendering is smooth, by making the frames appear one after the other at a constant, rather than variable rate.
 	
-	It is the \inquotes{windowing system} (e.g. X Window System, MS Windows, Wayland) which is responsible for displaying the data stored in a swap chain, by providing us with a \inquotes{surface} abstraction onto which data is drawn. Note that the windowing system is separate from the core Vulkan API, but Vulkan provides official (Khronos Group maintained) extensions which   
+	The core Vulkan API is platform (e.g. Windows, GNU/Linux, MacOS) and physical device (see Introduction) agnostic. In order to expose capabilities provided by a particular platform or physical device, the core API has to be extended by special extensions which take into account details relevant to the particular platform or physical device. Many of these extensions are provided and maintained by the Khronos Group itself, and we will now augment the core API with an extension that will allow it to deal with physical devices' specific implementations of swap chains.  
+	
+	%It is the \inquotes{windowing system} (e.g. X Window System, MS Windows, Wayland) which is responsible for displaying the data stored in a swap chain, by providing us with a \inquotes{surface} abstraction onto which data is drawn. Note that the windowing system is separate from the core Vulkan API, but there are Khronos Group maintained extensions to Vulkana (different ones for different windowing systems) which allow it to integrate with the windowing system (Window System Integration, or WSI). We'll come back to choosing the right API extension for WSI in a bit. 
+	
+
 
 \section{Thanks (in construction)}
 	The information of this tutorial was derived from multiple sources (\inquotes{"<search engine> is your best friend!"}), but some stand prominent amongst them. Grateful thanks is the least that is owed to those on this surely incomplete (and thus, expanding) list:
