@@ -27,6 +27,12 @@
 \usepackage[margin=1in]{geometry} % control size of margins
 %\usepackage{listings} % allow pretty formatting of stuff that needs pretty formatting
 \usepackage{minted} % making nicely coloured code snippets
+\usepackage[sorting=none]{biblatex} % bibliography
+\usepackage{graphicx} % put in figures
+\usepackage{siunitx} % pain-free angle representation in degrees (e.g. \ang{90}), other uses too
+
+%=======================================
+
 \newenvironment{custmint}[1]
 {%
 	\VerbatimEnvironment
@@ -50,6 +56,13 @@
 \newcommand{\cil}[1]{\mintinline[breaklines, breakanywhere]{c}{#1}}
 
 \newcommand{\ash}{\texttt{ash}}
+
+\newenvironment{indenttext}{%
+	\par%
+	\medskip
+	\leftskip=4em\rightskip=2em%
+	\noindent\ignorespaces}{%
+	\par\medskip}
 
 %============ BIBLIOGRAPHY =============
 \addbibresource{bibliography.bib}
@@ -96,7 +109,8 @@
 			\item why will you sometimes see \cil{int*} written as the type for an array of \cil{int}s?
 			\item what is a function prototype? 
 			\item where is a function's return type and the type of its arguments, indicated in its prototype?
-			\item do you know what a bit mask is in a broad sense (no need for details)? 
+			\item do you know what a bit mask is in a broad sense (no need for details)?
+			\item what does \texttt{"\textbackslash0"} do in a string?
 		\end{itemize}
 	
 	I think these are good things to know, since you're dealing with a Rust crate that is a wrapper around a C-ish interface. A lot of the documentation on Vulkan is in C-ish, and this documentation is good to read because:
@@ -372,7 +386,7 @@ typedef struct VkDeviceQueueCreateInfo {
 			\end{itemize}
 		
 		Let's have a look at the \cil{VkDeviceCreateInfo} "struct":
-\begin{custmint}{c}
+\begin{minted}{c}
 typedef struct VkDeviceCreateInfo {
 VkStructureType                    sType;
 const void*                        pNext;
@@ -385,7 +399,7 @@ uint32_t                           enabledExtensionCount;
 const char* const*                 ppEnabledExtensionNames;
 const VkPhysicalDeviceFeatures*    pEnabledFeatures;
 } VkDeviceCreateInfo;
-\end{custmint}
+\end{minted}
 		Relevant members are:
 			\begin{itemize}
 				\item \cil{queueCreateInfoCount}: how many queue groups are going to be associated with this logical device (each group will have its own \cil{vkDeviceQueueCreateInfo} "struct")
@@ -512,21 +526,135 @@ VkResult vkAllocateCommandBuffers(
 	
 	In coming sections, we will record commands to command buffers, but note that recording commands in the buffer does not make the GPU do anything until the command buffer is submitted using a \cil{vkQueueSubmit} call. We have much to do before we will make this call, which will be made in the last part of this tutorial series.
 	
-\section{\texttt{init-swapchain.rs}}
+\section{\texttt{init-swap-chain.rs}}
 	In this section, we'll learn how to initialize the \inquotes{swap chain}, sometimes also written as \inquotes{swapchain}. What is a swap chain? Well, Wikipedia says it best\autocite{wiki:swap-chain}:
-		\indenttext{In computer graphics, a swap chain is a series of virtual framebuffers utilized by the graphics card and graphics API [in our case, Vulkan] for frame rate stabilization and several other functions. The swap chain usually exists in graphics memory, but it can exist in system memory as well. The non-utilization of a swap chain may result in stuttering rendering, but its existence and utilization are required by many graphics APIs...In every swap chain there are at least two buffers. The first framebuffer, the screenbuffer, is the buffer that is rendered to the output of the video card. The remaining buffers are known as backbuffers. Each time a new frame is displayed, the first backbuffer in the swap chain takes the place of the screenbuffer, this is called presentation or swapping...}(see also Figure \ref{fig:swap-chain-depiction})
-			\begin{figure}
-				\centering
-				\includegraphics[width=0.7\linewidth]{fig:swap-chain-depiction}
-				\caption{An abstract depiction of the swap chain. \href{https://en.wikipedia.org/wiki/File:Swap_chain_depiction.svg}{Source.}}
-				\label{fig:swap-chain-depiction}
-			\end{figure}
+		\begin{indenttext}
+			In computer graphics, a swap chain is a series of virtual framebuffers utilized by the graphics card and graphics API [in our case, Vulkan] for frame rate stabilization and several other functions. The swap chain usually exists in graphics memory, but it can exist in system memory as well. The non-utilization of a swap chain may result in stuttering rendering, but its existence and utilization are required by many graphics APIs...In every swap chain there are at least two buffers. The first framebuffer, the screenbuffer, is the buffer that is rendered to the output of the video card. The remaining buffers are known as backbuffers. Each time a new frame is displayed, the first backbuffer in the swap chain takes the place of the screenbuffer, this is called presentation or swapping...(see also Figure \ref{fig:swap-chain-depiction})
+		\end{indenttext}
+	
+		\begin{figure}
+			\centering
+			\includegraphics[width=0.7\linewidth]{swap-chain-depiction}
+			\caption{An abstract depiction of the swap chain. \href{https://en.wikipedia.org/wiki/File:Swap_chain_depiction.svg}{Source.}}
+			\label{fig:swap-chain-depiction}
+		\end{figure}
 
 	So, the output of the graphics device is buffered through the use of swap chains, in order to give the end-user the illusion that rendering is smooth, by making the frames appear one after the other at a constant, rather than variable rate.
 	
-	The core Vulkan API is platform (e.g. Windows, GNU/Linux, MacOS) and physical device (see Introduction) agnostic. In order to expose capabilities provided by a particular platform or physical device, the core API has to be extended by special extensions which take into account details relevant to the particular platform or physical device. Many of these extensions are provided and maintained by the Khronos Group itself, and we will now augment the core API with an extension that will allow it to deal with physical devices' specific implementations of swap chains.  
+	The core Vulkan API is platform (e.g. Windows, GNU/Linux, MacOS) and physical device (see Introduction) agnostic. In order to expose capabilities provided by a particular platform or physical device, the core API has to be extended by special extensions which take into account details relevant to the particular platform or physical device. Many of these extensions are provided and maintained by the Khronos Group itself, and we will now augment the core API with an extension that will allow it to deal with physical devices' specific implementations of swap chains. 
 	
-	%It is the \inquotes{windowing system} (e.g. X Window System, MS Windows, Wayland) which is responsible for displaying the data stored in a swap chain, by providing us with a \inquotes{surface} abstraction onto which data is drawn. Note that the windowing system is separate from the core Vulkan API, but there are Khronos Group maintained extensions to Vulkana (different ones for different windowing systems) which allow it to integrate with the windowing system (Window System Integration, or WSI). We'll come back to choosing the right API extension for WSI in a bit. 
+	So, how does one enable the relevant extension? Recall the info "struct" we had to fill out in order to create a logical device:
+\begin{minted}{c}
+typedef struct VkDeviceCreateInfo {
+	VkStructureType                    sType;
+	const void*                        pNext;
+	VkDeviceCreateFlags                flags;
+	uint32_t                           queueCreateInfoCount;
+	const VkDeviceQueueCreateInfo*     pQueueCreateInfos;
+	uint32_t                           enabledLayerCount;
+	const char* const*                 ppEnabledLayerNames;
+	uint32_t                           enabledExtensionCount;
+	const char* const*                 ppEnabledExtensionNames;
+	const VkPhysicalDeviceFeatures*    pEnabledFeatures;
+} VkDeviceCreateInfo;
+\end{minted}
+	When we last looked at this "struct", we ignored \cil{enabledExtensionCount} and \cil{ppEnabledExtensionNames}, but in this section, we'll fill these out. For creating and managing swap chains, we are interested in the extension "VK\_KHR\_swapchain", so we'd pass a list containing that string, and the count of that list. 
+	
+	With \ash, we'd do this as follows:
+		\begin{enumerate}
+			\item \ril{use ash::extensions::Swapchain}: loads the module which contains swap chain extension related stuff. In particular, the \ril{ash::extensions::{DebugReport, Surface, Swapchain} "struct" has function pointer members (i.e. members which are basically functions), \ril{impl}s that will be of great use to us
+				
+			\item Create an array with the right string, by using the \ril{name} static \ril{impl} of \ril{Swapchain} (track down the source for \ril{Swapchain::name} as an exercise): 
+\begin{minted}{rust}
+let device_extension_names_pointers = [Swapchain::name().as_ptr()];
+\end{minted}
+			
+			\item set the \ril{enabled_extension_count} and \ril{pp_enabled_extension_names} members of the \ril{vk::DeviceCreateInfo} "struct" we fill out using \ril{device_extension_names_pointers.len() as u32} and \ril{device_extension_names_pointers} respectively
+		\end{enumerate}
+	
+	Thus, when we create \ril{device} in "init-swap-chain.rs", we'll have enabled the swap chain extension. 
+	
+	In C-ish our next step will be to set up the \cil{VkSwapchainCreateInfoKHR} info "struct":
+\begin{minted}{c}
+typedef struct VkSwapchainCreateInfoKHR {
+	VkStructureType                  sType;
+	const void*                      pNext;
+	VkSwapchainCreateFlagsKHR        flags;
+	VkSurfaceKHR                     surface;
+	uint32_t                         minImageCount;
+	VkFormat                         imageFormat;
+	VkColorSpaceKHR                  imageColorSpace;
+	VkExtent2D                       imageExtent;
+	uint32_t                         imageArrayLayers;
+	VkImageUsageFlags                imageUsage;
+	VkSharingMode                    imageSharingMode;
+	uint32_t                         queueFamilyIndexCount;
+	const uint32_t*                  pQueueFamilyIndices;
+	VkSurfaceTransformFlagBitsKHR    preTransform;
+	VkCompositeAlphaFlagBitsKHR      compositeAlpha;
+	VkPresentModeKHR                 presentMode;
+	VkBool32                         clipped;
+	VkSwapchainKHR                   oldSwapchain;
+} VkSwapchainCreateInfoKHR;
+\end{minted}
+	\begin{itemize}
+		\item \cil{sType} and \cil{pNext} are standard info "struct" fields, while \cil{flags} is for future use and set to 0 
+		
+		\item \cil{surface}: surface to which this swap chain will present to (more about surfaces coming up right after)
+		
+		\item \cil{minImageCount}: how \inquotes{deep} the swap chain should be (how many buffers it should have between input and output) 
+		
+		\item \cil{imageFormat}: format of the data representing the images (i.e. pixel encoding format) the swap chain will be handling, a value from the  \hyperref{http://vulkan-spec-chunked.ahcox.com/ch31s03.html#VkFormat}{\cil{VkFormat} "enum"}
+		
+		\item \cil{imageColorSpace}: specifies which \href{https://en.wikipedia.org/wiki/Color_space}{colour space} the presentation engine will interpret each pixel (recall that pixels store color information) \href{VkColorSpaceKHR}{http://vulkan-spec-chunked.ahcox.com/ch29s05.html#VkColorSpaceKHR}
+		
+		\item \cil{imageExtent}: maximum size of the images the swap chain will handle
+		
+		\item \cil{imageArrayLayers}: relevant for applications that will be presenting monitors that take advantage of the \href{https://en.wikipedia.org/wiki/Stereo_display}{stereoscopic effect} to provide the illusion of 3D images---we'll just set the value to 1, as we are making an application that will display on standard monitors
+		
+		\item \cil{imageUsage}: a bitmask of \href{http://vulkan-spec-chunked.ahcox.com/ch11s03.html#VkImageUsageFlagBits}{VkImageUsageFlagBits} specifying how the application will use the images
+		
+		\item \cil{imageSharingMode}: a value from the \href{https://www.khronos.org/registry/vulkan/specs/1.0/man/html/VkSharingMode.html}{VkSharingMode} "enum", specifying whether access to data in the swap chain is exclusive to queues from one family, or whether access is open to queues from multiple queue families:
+			\begin{itemize}
+				\item \cil{queueFamilyIndexCount} and \cil{pQueueFamilyIndices}: if concurrent access between queue families is allowed, which families have permission?
+			\end{itemize}
+		
+		\item \cil{preTransform}: a bitmask of \href{http://vulkan-spec-chunked.ahcox.com/ch29s05.html#VkSurfaceTransformFlagBitsKHR}{VkSurfaceTransformFlagBitsKHR} bits, which specifies how to transform (e.g. rotate, mirror, etc.) the images in the swap chain relative to the \inquotes{natural} orientation of the presentation device (e.g. a monitor); to understand this better, consider this contrived example: hanging upside down while using a computer is a new health fad, but your monitor is locked to the table its on, so your application sets the \cil{preTransform} bitmask to rotate the image by $\ang{180}$ so that the image appears right side up while you're upside down
+		
+		\item \cil{compositeAlpha}: a bitmask of \href{http://vulkan-spec-chunked.ahcox.com/ch29s05.html#VkCompositeAlphaFlagBitsKHR}{VkCompositeAlphaFlagBitsKHR} bits, indicating how the images should be \href{https://en.wikipedia.org/wiki/Alpha_compositing}{alpha composited} together
+		
+		\item \cil{presentMode}: value from \href{http://vulkan-spec-chunked.ahcox.com/ch29s05.html#VkPresentModeKHR}{\cil{VkPresentModeKHR}} "enum"; how will the presentation engine ask for data from the swap chain?
+		
+		\item \cil{clipped}: should the underlying infrastructure care about pixels that are outside the image extents relevant for this swap chain?
+		
+		\item \cil{oldSwapchain}: pointer to the old swap chain that this new swap chain is going to replace (\cil{NULL} usually)
+		\item 
+	\end{itemize}
+	
+	As you can see, there's a lot of infrastructure involved in taking image data from a physical device, and then displaying it to a user. It is the \inquotes{windowing system} (e.g. X Window System, MS Windows, Wayland) which is responsible for displaying the data stored in a swap chain, by providing us with a \inquotes{surface} abstraction onto which data is drawn. Note that the windowing system is separate from the core Vulkan API, but there are Khronos Group maintained extensions to Vulkana (different ones for different windowing systems) which allow it to integrate with the windowing system (Window System Integration, or WSI). The relevant extension in this case will be specified in the info "struct" used to create the instance.
+	
+	Getting the name of the relevant extension using \ash needs a bit more care this time, because the extension to be used depends upon which platform our application is on. First, we should load the relevant extension modules: \ril{use ash::extensions::{Surface, Win32Surface, XlibSurface}}, then we write functions that will \href{https://doc.rust-lang.org/book/first-edition/conditional-compilation.html}{conditionally compile} based on which platform we are on:
+\begin{minted}{rust}
+#[cfg(all(unix, not(target_os = "android")))]
+fn extension_names() -> Vec<*const i8> {
+	vec![
+		Surface::name().as_ptr(),
+		XlibSurface::name().as_ptr(),
+	]
+}
+
+#[cfg(all(windows))]
+fn extension_names() -> Vec<*const i8> {
+	vec![
+		Surface::name().as_ptr(),
+		Win32Surface::name().as_ptr(),
+	]
+}
+\end{minted}
+	
+	
+	
+	
 	
 
 
