@@ -1,0 +1,16 @@
+\documentclass{article}
+
+\usepackage{lmodern}
+\usepackage[T1]{fontenc}
+
+\let\oldquotation\quotation
+\renewenvironment{quotation}{\begin{oldquotation}\fontfamily{ccr}\selectfont}{\end{oldquotation}}
+
+
+\begin{document}
+
+    \begin{quotation}
+        This is an important quotation.
+    \end{quotation}
+
+\end{document}

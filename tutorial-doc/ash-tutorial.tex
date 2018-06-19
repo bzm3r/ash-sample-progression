@@ -64,6 +64,9 @@
 	\noindent\ignorespaces}{%
 	\par\medskip}
 
+\let\oldquotation\quotation
+\renewenvironment{quotation}{\begin{indenttext}\fontfamily{ccr}\selectfont}{\end{indenttext}}
+
 %============ BIBLIOGRAPHY =============
 \addbibresource{bibliography.bib}
 %=======================================
@@ -79,93 +82,82 @@
 
 % -----------------------------------------
 
-\section{Setup}
-	Make sure:
-		\begin{enumerate}
-			\item you read the Wikipedia pages regarding Vulkan and Khronos, for general background and historical information (which can often come in handy in surprising ways!)
-			
-			\item you have the rust compiler installed: \href{https://www.rust-lang.org}{https://www.rust-lang.org} (I am going to assume you've gone through the basics of Rust)
-			
-			\item you have the Vulkan SDK installed: \href{https://www.lunarg.com/vulkan-sdk/}{https://www.lunarg.com/vulkan-sdk/}
-		\end{enumerate}
-	
-\section{A note about C-ish for those unfamiliar with it}
-	C-ish my catchall term for C/C++. For some parts of this guide, I am going to assume you know the following (and I think you would not need more than an hour to figure these things out):
-		\begin{itemize}
-			\item how \href{https://en.wikibooks.org/wiki/C_Programming/Arrays_and_strings}{arrays}, \href{https://en.wikibooks.org/wiki/C_Programming/Advanced_data_types}{"struct"s and "enum"s} defined in C-ish, and what th keyword \href{https://en.wikibooks.org/wiki/C_Programming/Advanced_data_types}{\cil{typdef}} does
-			
-			\item what a \href{https://en.wikibooks.org/wiki/C_Programming/Pointers_and_arrays}{pointer} is, and how it is related to C-ish \href{https://en.wikibooks.org/wiki/C_Programming/Pointers_and_arrays#Pointers_and_Arrays}{arrays}
-			
-			\item the syntax of a C-ish \href{https://en.wikibooks.org/wiki/C_Programming/Procedures_and_functions}{function}s
-			
-			\item what a \href{https://en.wikipedia.org/wiki/Mask_(computing)}{bit mask} is, and how it's \href{https://stackoverflow.com/questions/10493411/what-is-bit-masking}{used in C-ish}
-		\end{itemize}
-	
-	If you can answer all these questions, you're good to go:
-		\begin{itemize}
-			\item what is \cil{void}? 
-			\item why is a C-ish pointer evil compared to a Rust reference?
-			\item what is \cil{NULL}?
-			\item why will you sometimes see \cil{int*} written as the type for an array of \cil{int}s?
-			\item what is a function prototype? 
-			\item where is a function's return type and the type of its arguments, indicated in its prototype?
-			\item do you know what a bit mask is in a broad sense (no need for details)?
-			\item what does \texttt{"\textbackslash0"} do in a string?
-		\end{itemize}
-	
-	I think these are good things to know, since you're dealing with a Rust crate that is a wrapper around a C-ish interface. A lot of the documentation on Vulkan is in C-ish, and this documentation is good to read because:
-		\begin{itemize}
-			\item it tells you what C-ish analogues you need to look for in the "ash" source code/documentation, when exploring "ash"
-			
-			\item lets you read the basics of Vulkan tutorials that operate in C-ish, in case you need to read about some stuff outside the scope of this tutorial
-		\end{itemize}
-	
-\section{Introduction}
+\begin{abstract}
+    This document provides a Rust-based introduction to using Vulkan to create graphics. \href{https://github.com/MaikKlein/ash}{"ash"}, a Rust wrapper around the C Vulkan API, is used to build a series of small programs (\inquotes{samples}) which iterate upon one another towards a final goal of displaying a 3D cube.  
+\end{abstract}
 
-Vulkan provides an interface between your application and a Vulkan-compatible physical device installed in your system, which the application wants to use for highly-parallel computation typical of graphics tasks, but also useful elsewhere. Vulkan can interface with many different types of physical devices:
+\section{Setup}
+    Necessary: install \href{https://www.lunarg.com/vulkan-sdk/}{Vulkan SDK}.
+    
+    Optional: read history of Vulkan on Wikipedia.
+	
+\section{\inquotes{C-ish}}
+	C-ish is this document's shorthand for C/C++. Since the Vulkan API is written in C, being faimilar with certain features of C-ish is useful. Additionally, many existing Vulkan tutorials use C++. 
+    
+    However, this document does not assume intimacy with C-ish: in fact, the author has only a passing familiarity. The following is a complete list of concepts that will be directly or indirectly referenced within the document:
+		\begin{itemize}
+            \item syntax and concept differences between C-ish pointers and Rust references
+            
+			\item C-ish \href{https://en.wikibooks.org/wiki/C_Programming/Arrays_and_strings}{array}s
+            
+            \item relationship between  \href{https://en.wikibooks.org/wiki/C_Programming/Pointers_and_arrays}{pointers} and \href{https://en.wikibooks.org/wiki/C_Programming/Pointers_and_arrays#Pointers_and_Arrays}{arrays} in C-ish; why will one sometimes see \cil{int*} given as the type for an array of \cil{int}s?
+            
+            \item C-ish \href{https://en.wikibooks.org/wiki/C_Programming/Advanced_data_types}{"struct"s and "enum"s}
+            
+            \item the keyword \href{https://en.wikibooks.org/wiki/C_Programming/Advanced_data_types}{\cil{typdef}}
+			
+            \item the keyword \cil{void}
+            
+            \item the keyword \cil{NULL}
+            
+			\item \href{https://en.wikibooks.org/wiki/C_Programming/Procedures_and_functions}{function} definition syntax; what is a \inquotes{function prototype}? 
+			
+			\item what a \href{https://en.wikipedia.org/wiki/Mask_(computing)}{bit mask} is, and \href{https://stackoverflow.com/questions/10493411/what-is-bit-masking}{how it's used}
+            
+            \item \item what does \texttt{"\textbackslash0"} do in a string? 
+		\end{itemize}
+    
+    
+\section{Introduction to Vulkan}
+
+Vulkan provides an interface between software applications and a Vulkan-compatible physical devices. Vulkan compatible physical devices can be:
 	\begin{itemize}
-		\item the CPU of your system
-		\item \href{https://www.reddit.com/r/vulkan/comments/5f7jhn/is_it_possible_to_run_vulkan_on_cpu/}{a software abstraction running on top of the CPU}
+		\item a CPU
+		\item \href{https://www.reddit.com/r/vulkan/comments/5f7jhn/is_it_possible_to_run_vulkan_on_cpu/}{a software abstraction running on top of a CPU}
 		\item special purpose hardware for highly-parallel computing, e.g. a GPU;
 		\item many CPUs configured to share data with each other
-		\item et cetera
 	\end{itemize}
-Note that each one of these physical devices also have some associated memory, where instructions, input data, and output data may be stored. Vulkan allows your application to interface with many varieties of physical devices, regardless of the details of each physical device's configuration, as long as the physical device provides a Vulkan-compatible \inquotes{driver}, which would be a piece of software that provides a Vulkan interface to the underlying hardware. Thus, as an application programmer, you only need to worry about interfacing your application with Vulkan, while the drivers handle interfacing Vulkan with the hardware. 
+A physical device is Vulkan compatible if someone has written a \inquotes{driver} meant to organize communication between the physical device and Vulkan's internals. Thus, Vulkan standardizes communication between software and a wide variety of hardware.
 
-Note that the driver doesn't do anything beyond helping Vulkan pass instructions to the hardware, so verifying whether the instructions you send make sense, or whether the resulting data from a computation is not garbage, is your task. However, during development of your application, you can specify additional software \emph{layers} between your application's \inquotes{loader} (i.e. its Vulkan communication object) and the physical device's driver, which can help to debug and verify the correctness of the instructions you are passing through the loader. You can choose to turn on and off these loaders as you wish.
+This interface between application and hardware drivers is called the \inquotes{loader}. Thus, to begin using Vulkan, a programmer initializes the loader. Vulkan's specification calls for both the loader and the drivers it communicates with to be highly specialized to facilitate communication between software and silicon, and extraneous capabilities (such as debugging conveniences) are provided through optional (chosen by the programmer) \inquotes{layers} which are placed between the loader-driver conduit.    
 
-Let's now take a closer look at the loader, which is more specifically called an \inquotes{instance}. When you first create the instance, it searches your system for physical devices with Vulkan-compatible drivers, and enumerates these for you, so that you can choose which physical device(s) you would like to work with. Once you have chosen specific physical devices, you can describe more specifically which features of each physical device you would like to use (e.g. 64-bit floats, or 32-bit floats?). Each physical device can then be abstracted into \inquotes{logical devices}, which is a software represent subsets of a physical device's resources. For example, let us say your application needs to do some graphics calculations, and some simulation related calculations: so to organize your physical device(s)' computing resources, you could set one logical device to deal with the graphics, and the other logical device could be set to deal with calculations. Thus, specification of logical devices is an abstraction that helps you organize computing resources. Each logical device allows you to create \inquotes{queues}, which are selected from \inquotes{queue families}. Queues organize the communication of data from your application (e.g. computation instructions, or some data to be manipulated) to the physical device's driver, and they also organize communication of data from your physical device to your application (e.g. results of computations, or status of the physical device's computing efforts). Queue families represent specialization of queues: queues to handle data (memory) transfers, queues to handle instruction transfer, etc. Note that sometimes, only certain queue families may be available on certain physical devices (and their availability may indicate what role the physical device is specialized for), but common physical devices tend to support all commonly used queue families. Finally, we may also take advantage of functionality provided by Vulkan \inquotes{extensions}, which are API extensions that provide common functionality for some often-occurring Vulkan use-cases (e.g. graphics display).
+Thus, to begin, a programmer creates an \inquotes{instance} of the loader. Through this loader instance, they search system for physical devices with Vulkan-compatible drivers. They choose specific physical devices to work with, and set which optional features of the physical devices should be used (e.g. use 64-bit floats, or 32-bit floats?). For each physical device, the programmer defines one or more \inquotes{logical devices}: abstractions representing subsets of a physical device's resources. Each logical device is used to create \inquotes{queues}, which are selected from several types of \inquotes{queue families}. Not all physical devices may implement every type of queue family, as different queue families are specialized for transferring particular types/formats of information. Finally, the programmer enables Vulkan API \inquotes{extensions} which provide convenient functions to handle certain tasks they might be interested in (e.g. graphics display).
 
-We are interested in using Rust to write our application, but the Vulkan API is written in C, so we use \href{https://github.com/MaikKlein/ash}{"ash"}, which is a lightweight (thus unsafe) Rust wrapper around Vulkan. This document will teach you how to use Vulkan through "ash", by helping you build a series of small programs (\inquotes{samples}) which iterate upon each other towards a final product (displaying a cube). 
+\begin{quotation}
+    Vulkan exposes one or more devices, each of which exposes one or more queues which may process work asynchronously to one another. The set of queues supported by a device is partitioned into families. Each family supports one or more types of functionality and may contain multiple queues with similar characteristics. Queues within a single family are considered compatible with one another, and work produced for a family of queues can be executed on any queue within that family. This Specification defines four types of functionality that queues may support: graphics, compute, transfer, and sparse memory management.
+\end{quotation}
 
-\section{Instances, Logical Devices and Queues}
+\section{0: \texttt{init-instance.rs}}
 
-A Vulkan \emph{instance} is a software object (with C-ish type \cil{vkInstance}) which your application uses to interact with Vulkan-compatible physical devices which are represented as members of the instance. Commands from your application are passed through a Vulkan instance into a \emph{queue} (each associated with a logical device abstracting a subset of the physical device's resources) which pipes to and from the physical device. 
-
-Note that since an instance is a software abstraction, if necessary, one could have several instances interacting with one physical device, if it provides value to how your application abstracts your physical devices. For now though, we'll focus on using one instance.
-	
-\section{\texttt{init-instance.rs}}
-	
-	If we were using C-ish, an instance is created by calling the function \cil{vkCreateInstance}, which has the prototype:
+A Vulkan \emph{instance} has C-ish type \cil{vkInstance}. One could create many \cil{vkInstance}s, if it is helpful for their task, but we only need to create one. In C-ish, an instance is created by calling the function \cil{vkCreateInstance}, which has the prototype:
 		\begin{minted}{c}
 VkResult vkCreateInstance(
 const VkInstanceCreateInfo*                 pCreateInfo,
 const VkAllocationCallbacks*                pAllocator,
 VkInstance*                                 pInstance);
 		\end{minted}
-		
-	Let's take this apart:
+        
 		\begin{itemize}
-			\item return type \cil{vkResult}: a C-ish "enum", which contains a bunch of  constants indicating the result of different Vulkan commands: in this case, success (i.e. successful creation of an instance), or some sort of a failure;
+			\item return type \cil{vkResult}: a C-ish "enum", which contains a bunch of  constants indicating the result of different Vulkan commands: in this case, success (i.e. successful creation of an instance), or some sort of a failure
 			
-			\item argument \cil{pCreateInfo}: a pointer to a \cil{vkInstanceCreateInfo} "struct";
+			\item argument \cil{pCreateInfo}: a pointer to a \cil{vkInstanceCreateInfo} "struct"
 			
-			\item argument \cil{pAllocator}: a pointer to a \cil{vkAllocationCallbacks} "struct" whose members contain various functions you might have written to help the physical device organize its memory usage---we will tend to go simple, and not provide anything, in which case the physical device will use its default memory management routines;
+			\item argument \cil{pAllocator}: a pointer to a \cil{vkAllocationCallbacks} "struct" whose members contain various functions you might have written to help the physical device organize its memory usage---we will tend to go simple, and not provide anything, in which case the physical device will use its default memory management routines
 			
 			\item argument \cil{pInstance} an \inquotes{opaque pointer} to an instance (an opaque pointer is a C-ish concept which provides a pointer to a data structure, but the pointer cannot be used to query details of the data structure, nor can it be de-referenced)
 		\end{itemize}
-	
-	Let's now have a closer look at \cil{vkInstanceCreateInfo} "struct" definition, which has some members typical to many other Vulkan \inquotes{info "struct"}s:
+
+Let us examine the "struct" \cil{vkInstanceCreateInfo}, since we need to provide \cil{vkCreateInstance} with one:
 		\begin{minted}{c}
 typedef struct VkInstanceCreateInfo {
 	VkStructureType             sType;
@@ -178,25 +170,24 @@ typedef struct VkInstanceCreateInfo {
 	const char* const*          ppEnabledExtensionNames;
 } VkInstanceCreateInfo;
 		\end{minted}
-	A brief description of the members:
 		\begin{itemize}
-			\item \cil{sType}: indicates the type of the info "struct", in this case \cil{VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO}---this is useful because in C, you might sometimes get a typeless (\cil{void*}) pointer to a particular "struct", and to determine what kind of "struct" it is, you could query the \cil{sType} field
+			\item \cil{sType}: a member common to all Vulkan \inquotes{info "struct"}s, it indicates the type of the info "struct", in this case \cil{VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO}---this is useful because in C, you might sometimes get a typeless (\cil{void*}) pointer to a particular "struct", and to determine what kind of "struct" it is, you could query the \cil{sType} field
 			
-			\item \cil{pNext}: another typical info "struct" member, usually set to \cil{NULL}, and can be used to pass additional "struct"s (whose type will be defined by the \cil{sType} field)---this is only used by API extensions, and not the core Vulkan API!
+			\item \cil{pNext}: another common info "struct" member, usually set to \cil{NULL} unless API extensions (and only extensions) require one to pass additional "struct"s
 			
-			\item \cil{flags}: currently no flags defined, set to "0"
+			\item \cil{flags}: for future Vulkan versions, currently no flags defined, set to "0"
 			
 			\item \cil{pApplicationInfo}: pointer to a \cil{VkApplicationInfo} "struct" which we will study next
 			
 			\item \cil{ppEnabledLayerNames}: in this tutorial, we will not be using layers, so we can set this to \cil{NULL}
 			
-			\item \cil{enabledLayerCount}: length of the \cil{ppEnabledLayerNames} list, should be zero if \cil{ppEnabledLayerNames == NULL}
+			\item \cil{enabledLayerCount}: length of the \cil{ppEnabledLayerNames} list thus should be zero since we have \cil{ppEnabledLayerNames == NULL}
 			
 			\item \cil{ppEnabledExtensionNames}: at this point in the tutorial, we are not using extensions, so we'll be setting this to \cil{NULL}
 			
 			\item \cil{enabledExtensionCount}: length of the \cil{ppEnabledExtensionNames} list
 		\end{itemize}
-	The \cil{vkInstanceCreateInfo} "struct" contains a \cil{VkApplicationInfo} "struct" which has the following definition:
+This "struct" has which has some members typical to many other Vulkan info "struct"s, as the reader will see. \cil{vkInstanceCreateInfo} "struct" requires as a member an instance of the \cil{VkApplicationInfo} "struct" meant to provide some information regarding the application initializing the loader:
 		\begin{minted}{c}
 typedef struct VkApplicationInfo {
 	VkStructureType    sType;
@@ -208,38 +199,37 @@ typedef struct VkApplicationInfo {
 	uint32_t           apiVersion;
 } VkApplicationInfo;
 		\end{minted}
-	This "struct" is meant to provide some information regarding your application; a brief overview of its members:
-		\begin{itemize}
-			\item \cil{sType}, \cil{pNext}: common features of many Vulkan info "struct"s, see the \cil{vkInstanceCreateInfo} "struct"'s member overview, as these are the same;
-			
-			\item \cil{pApplicationName}, \cil{applicationVersion}, \cil{pEngineName}, \cil{engineVersion}: fields that you may fill out if you desire to annotate general report/debugging data, or if you want a tip a driver with specific behaviour for your application implemented;
-			
-			\item \cil{apiVersion}:  this field communicates the major, minor, and patch levels of the Vulkan API used by the application; we'll be using "VK\_API\_VERSION\_1\_0" (major is "1", minor is "0").
-		\end{itemize}
+	\begin{itemize}
+		\item \cil{sType}, \cil{pNext}: common features of many Vulkan info "struct"s, see the \cil{vkInstanceCreateInfo} "struct"'s member overview, as these are the same;
+		
+		\item \cil{pApplicationName}, \cil{applicationVersion}, \cil{pEngineName}, \cil{engineVersion}: for general use, e.g. sometimes drivers may be designed to execute special behaviour for certain application---this can be used to let them know which application they are dealing with
+		
+		\item \cil{apiVersion}:  this field communicates the major, minor, and patch levels of the Vulkan API used by the application; we'll be using "VK\_API\_VERSION\_1\_0" (major is "1", minor is "0").
+	\end{itemize}
+
+In "/init-instance/src/main.rs" we initialize a loader. Points to note and questions to consider:
+	\begin{itemize}
+		\item comments explaining \ril{use} statements
+		
+		\item \ril{unsafe} block: "ash" an almost one-to-one interface to the Vulkan C API, thus many of Rust's safety features have to be disabled
+		
+		\item for fields like \cil{pApplicationName} we create a \ril{std::ffi::CString} and then pass it \inquotes{raw} (i.e. as a pointer) by calling \ril{as_ptr}, rather than using the standard Rust \ril{String}
+		
+		\item \ril{vk::StructureType} is used to fill out \ril{s_type} fields
+		
+		\item can you explain how the \ril{flags} field is filled out? (hint: look up the definition of the \ril{vk::InstanceCreateInfo} "struct" in \href{https://docs.rs/ash}{"ash"'s documentation} and then answer: what type is \ril{flags}? How is the \ril{std::Default} trait implemented for it?)
+		
+		\item that to actually use Vulkan, we first initialize an \ril{ash::Entry} "struct" which contains the supporting infrastructure to allow Rust to interface with Vulkan's C implementation
+		
+		\item the \ril{ash::Entry} "struct" also has some \ril{impl}s which put syntactic sugar around calling functions like \ril{vkCreateInstance}, in particular the function \ril{create_instance}---can you find where that function is implemented? (hint: open up \href{https://docs.rs/ash}{"ash"'s documentation}, and 1) figure out where the \ril{EntryV1_0} trait is defined, 2) figure out where \ril{Entry<V>} is defined, and 3) how is the \ril{EntryV1_0} implemented for \ril{Entry<V1_0>}?)
+		
+		\item we have to manually destroy the instance once we're done
+	\end{itemize} 
 	
-	With these prototypes in mind, let's see how we can use Vulkan through "ash". Open up "/init-instance/src/main.rs", and:
-		\begin{itemize}
-			\item note comments explaining what \ril{use} statements, if you need some clarification
-			
-			\item note the \ril{unsafe} block
-			
-			\item note how for fields like \cil{pApplicationName} we create a \ril{std::ffi::CString} and then pass it \inquotes{raw} (i.e. as a pointer) by calling \ril{as_ptr}
-			
-			\item note how \ril{vk::StructureType} is used to fill out \ril{s_type} fields
-			
-			\item can you explain how the \ril{flags} field is filled out? (hint: look up the definition of the \ril{vk::InstanceCreateInfo} "struct" in \href{https://docs.rs/ash}{"ash"'s documentation} and then answer: what type is \ril{flags}? How is the \ril{std::Default} trait implemented for it?)
-			
-			\item to actually use Vulkan, we first initialize an \ril{ash::Entry} "struct" which contains the supporting infrastructure to allow Rust to interface with Vulkan's C implementation
-			
-			\item the \ril{ash::Entry} "struct" also has some \ril{impl}s which put syntactic sugar around calling functions like \ril{vkCreateInstance}, in particular the function \ril{create_instance}---can you find where that function is implemented? (hint: open up \href{https://docs.rs/ash}{"ash"'s documentation}, and 1) figure out where the \ril{EntryV1_0} trait is defined, 2) figure out where \ril{Entry<V>} is defined, and 3) how is the \ril{EntryV1_0} implemented for \ril{Entry<V1_0>}?)
-			
-			\item note how we have to manually destroy the instance once we're done
-		\end{itemize} 
-	
-	To see everything in action: 
-		\begin{center}
-			"cargo run --bin init-instance"
-		\end{center}
+To see everything in action: 
+	\begin{center}
+		"cargo run --bin init-instance"
+	\end{center}
 	
 \section{\texttt{enumerate-devices.rs}}
 	Now that we know how to initialize an instance, let us learn how to use it to enumerate the physical devices on our system. In general, obtaining a list of stuff is a fairly common operation in Vulkan, so there's a generalized pattern behind what we want to do on the C side of things. Say you have a function \cil{getListData} to get a list of some stuff from some instance of a "struct" \cil{aStruct}:
@@ -562,7 +552,7 @@ typedef struct VkDeviceCreateInfo {
 	
 	With \ash, we'd do this as follows:
 		\begin{enumerate}
-			\item \ril{use ash::extensions::Swapchain}: loads the module which contains swap chain extension related stuff. In particular, the \ril{ash::extensions::{DebugReport, Surface, Swapchain} "struct" has function pointer members (i.e. members which are basically functions), \ril{impl}s that will be of great use to us
+			\item \ril{use ash::extensions::Swapchain}: loads the module which contains swap chain extension related stuff. In particular, the \ril{ash::extensions::{DebugReport, Surface, Swapchain}} "struct" has function pointer members (i.e. members which are basically functions), \ril{impl}s that will be of great use to us
 				
 			\item Create an array with the right string, by using the \ril{name} static \ril{impl} of \ril{Swapchain} (track down the source for \ril{Swapchain::name} as an exercise): 
 \begin{minted}{rust}
@@ -604,9 +594,9 @@ typedef struct VkSwapchainCreateInfoKHR {
 		
 		\item \cil{minImageCount}: how \inquotes{deep} the swap chain should be (how many buffers it should have between input and output) 
 		
-		\item \cil{imageFormat}: format of the data representing the images (i.e. pixel encoding format) the swap chain will be handling, a value from the  \hyperref{http://vulkan-spec-chunked.ahcox.com/ch31s03.html#VkFormat}{\cil{VkFormat} "enum"}
-		
-		\item \cil{imageColorSpace}: specifies which \href{https://en.wikipedia.org/wiki/Color_space}{colour space} the presentation engine will interpret each pixel (recall that pixels store color information) \href{VkColorSpaceKHR}{http://vulkan-spec-chunked.ahcox.com/ch29s05.html#VkColorSpaceKHR}
+		\item \cil{imageFormat}: format of the data representing the images (i.e. pixel encoding format) the swap chain will be handling, a value from the \href{http://vulkan-spec-chunked.ahcox.com/ch31s03.html#VkFormat}{\cil{VkFormat} "enum"}
+        
+		\item \cil{imageColorSpace}: specifies which \href{https://en.wikipedia.org/wiki/Color_space}{colour space} the presentation engine will interpret each pixel (recall that pixels store color information) \href{http://vulkan-spec-chunked.ahcox.com/ch29s05.html#VkColorSpaceKHR}{\cil{VkColorSpaceKHR}}
 		
 		\item \cil{imageExtent}: maximum size of the images the swap chain will handle
 		
@@ -631,7 +621,9 @@ typedef struct VkSwapchainCreateInfoKHR {
 		\item 
 	\end{itemize}
 	
-	As you can see, there's a lot of infrastructure involved in taking image data from a physical device, and then displaying it to a user. It is the \inquotes{windowing system} (e.g. X Window System, MS Windows, Wayland) which is responsible for displaying the data stored in a swap chain, by providing us with a \inquotes{surface} abstraction onto which data is drawn. Note that the windowing system is separate from the core Vulkan API, but there are Khronos Group maintained extensions to Vulkana (different ones for different windowing systems) which allow it to integrate with the windowing system (Window System Integration, or WSI). The relevant extension in this case will be specified in the info "struct" used to create the instance.
+	As you can see, there's a lot of infrastructure involved in taking image data from a physical device, and then displaying it to a user. The rest of this section is going to go over how to fill out this structure.
+	
+	It is the \inquotes{windowing system} (e.g. X Window System, MS Windows, Wayland) which is responsible for displaying the data stored in a swap chain, by providing us with a \inquotes{surface} abstraction onto which data is drawn. Note that the windowing system is separate from the core Vulkan API, but there are Khronos Group maintained extensions to Vulkana (different ones for different windowing systems) which allow it to integrate with the windowing system (Window System Integration, or WSI). The relevant extension in this case will be specified in the info "struct" used to create the instance.
 	
 	Getting the name of the relevant extension using \ash needs a bit more care this time, because the extension to be used depends upon which platform our application is on. First, we should load the relevant extension modules: \ril{use ash::extensions::{Surface, Win32Surface, XlibSurface}}, then we write functions that will \href{https://doc.rust-lang.org/book/first-edition/conditional-compilation.html}{conditionally compile} based on which platform we are on:
 \begin{minted}{rust}
@@ -651,15 +643,31 @@ fn extension_names() -> Vec<*const i8> {
 	]
 }
 \end{minted}
-	
-	
-	
-	
-	
 
+	Now we have surface related extensions loaded, but we still can't create a surface, until there is a window which can be associated with the surface. In C-ish, there are various windowing libraries, but in Rust, we'll use \ril{extern crate winit}. 
+	
+	\subsection{Creating a window}
+		The following code in "init-swap-chain.rs" is relevant to creating a window:
+			\begin{minted}{rust}
+let events_loop = winit::EventsLoop::new();
 
-\section{Thanks (in construction)}
-	The information of this tutorial was derived from multiple sources (\inquotes{"<search engine> is your best friend!"}), but some stand prominent amongst them. Grateful thanks is the least that is owed to those on this surely incomplete (and thus, expanding) list:
+let window = winit::WindowBuilder::new()
+.with_title("Ash - Example")
+.with_dimensions(window_width, window_height)
+.build(&events_loop)
+.unwrap();
+			\end{minted}
+			
+		Let's understand what is going on here. First of all, we create an \href{https://en.wikipedia.org/wiki/Event_loop#Windows_applications}{event loop}. An event loop essentially handles messages sent between the user interface (the window), and our application. For instance, if the user presses a key, the event loop will notify our application of this, and allow it to choose what to do. It is worth taking a look at \href{https://docs.rs/winit/0.10.0/winit/struct.EventsLoop.html}{the documentation} for \ril{winit::EventsLoop}. Once we have the events loop set up, we build a window, using several pretty self-explanatory calls which provide the title, definition and so on. This tutorial will not spend much time discussing the internals of the window system, which depend heavily upon the particular platform the application is running on. Now that we have a \ril{window}, we can create a surface. Again, these functions are going to be platform dependent: have a look at them (\ril{create_surface}) within the source code for this example. 
+        
+        Find a queue that is capable of presentation.
+        
+        
+    
+    The gist of what is happening in these functions is that 
+        
+\section{Thanks}
+	The information in this tutorial was derived from multiple sources (\inquotes{"<search engine> is your best friend!"}), but some stand prominent amongst them. Grateful thanks is owed to:
 		\begin{enumerate}
 			\item \href{https://vulkan.lunarg.com/doc/sdk/1.0.65.1/windows/tutorial/html/index.html}{LunarG's Vulkan Samples Progression}, whose progression structure I found comforting, and thus stole, along with some conceptual explanations. 
 			
@@ -667,7 +675,7 @@ fn extension_names() -> Vec<*const i8> {
 			
 			\item \href{Maik Klein}{https://github.com/MaikKlein}, who began writing \ash, and is its prime contributor. Also, Maik and \href{https://github.com/msiglreith}{msiglreith} on \ash's Gitter were happy to answer my questions.
 			
-			\item The Rust organization and community, and the Khronos Group who designed the Vulkan API, and helps maintain it.
+			\item The many people behind open software projects such as Vulkan and Rust, who build vast infrastructure to provide ease that we take for granted. 
 		\end{enumerate}
 \printbibliography
 \end{document}

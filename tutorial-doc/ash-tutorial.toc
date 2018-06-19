@@ -1,25 +1,13 @@
 \boolfalse {citerequest}\boolfalse {citetracker}\boolfalse {pagetracker}\boolfalse {backtracker}\relax 
-\defcounter {refsection}{0}\relax 
 \contentsline {section}{\numberline {}Setup}{1}{section.1}
-\defcounter {refsection}{0}\relax 
-\contentsline {section}{\numberline {}A note about C-ish for those unfamiliar with it}{2}{section.2}
-\defcounter {refsection}{0}\relax 
-\contentsline {section}{\numberline {}Introduction}{2}{section.3}
-\defcounter {refsection}{0}\relax 
-\contentsline {section}{\numberline {}Instances, Logical Devices and Queues}{4}{section.4}
-\defcounter {refsection}{0}\relax 
-\contentsline {section}{\numberline {}\texttt {init-instance.rs}}{4}{section.5}
-\defcounter {refsection}{0}\relax 
-\contentsline {section}{\numberline {}\texttt {enumerate-devices.rs}}{7}{section.6}
-\defcounter {refsection}{0}\relax 
-\contentsline {section}{\numberline {}\texttt {init-device.rs}}{8}{section.7}
-\defcounter {refsection}{0}\relax 
-\contentsline {subsection}{\numberline {7.1}\texttt {init-device-0.rs}}{8}{subsection.7.1}
-\defcounter {refsection}{0}\relax 
-\contentsline {subsection}{\numberline {7.2}\texttt {init-device-1.rs}}{10}{subsection.7.2}
-\defcounter {refsection}{0}\relax 
-\contentsline {section}{\numberline {}\texttt {init-command-buffer.rs}}{12}{section.8}
-\defcounter {refsection}{0}\relax 
-\contentsline {section}{\numberline {}\texttt {init-swap-chain.rs}}{15}{section.9}
-\defcounter {refsection}{0}\relax 
-\contentsline {section}{\numberline {}Thanks (in construction)}{16}{section.10}
+\contentsline {section}{\numberline {}``C-ish''}{2}{section.2}
+\contentsline {section}{\numberline {}Introduction to Vulkan}{2}{section.3}
+\contentsline {section}{\numberline {}0: \texttt {init-instance.rs}}{3}{section.4}
+\contentsline {section}{\numberline {}\texttt {enumerate-devices.rs}}{6}{section.5}
+\contentsline {section}{\numberline {}\texttt {init-device.rs}}{7}{section.6}
+\contentsline {subsection}{\numberline {6.1}\texttt {init-device-0.rs}}{7}{subsection.6.1}
+\contentsline {subsection}{\numberline {6.2}\texttt {init-device-1.rs}}{9}{subsection.6.2}
+\contentsline {section}{\numberline {}\texttt {init-command-buffer.rs}}{11}{section.7}
+\contentsline {section}{\numberline {}\texttt {init-swap-chain.rs}}{14}{section.8}
+\contentsline {subsection}{\numberline {8.1}Creating a window}{18}{subsection.8.1}
+\contentsline {section}{\numberline {}Thanks}{18}{section.9}
