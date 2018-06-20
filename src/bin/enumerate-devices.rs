@@ -17,6 +17,7 @@ fn main() {
         let pdevices = match instance.enumerate_physical_devices() {
             Ok(pdevices) => pdevices,
             Err(error) => {
+                // we should destroy the instance we have created, before panicking
                 destroy_instance_and_panic(
                     &format!("failed to create pdevices: {:?}", error),
                     instance,
@@ -31,20 +32,14 @@ fn main() {
     }
 }
 
-#[cfg(all(unix, not(target_os = "android")))]
+
 fn extension_names() -> Vec<*const i8> {
     Vec::<*const i8>::new()
 }
 
-#[cfg(all(windows))]
-fn extension_names() -> Vec<*const i8> {
-    Vec::<*const i8>::new()
-}
-
-fn init_instance() -> (Entry<V1_0>, Instance<V1_0>) {
+fn init_instance(app_name: &str) -> (Entry<V1_0>, Instance<V1_0>) {
     unsafe {
-        let app_name = CString::new("vulkansamples_instance").unwrap();
-        let app_name_raw = app_name.as_ptr();
+        let app_name_raw = CString::new(app_name).unwrap().as_ptr();
 
         println!("Creating ApplicationInfo...");
         let appinfo = vk::ApplicationInfo {
@@ -55,36 +50,36 @@ fn init_instance() -> (Entry<V1_0>, Instance<V1_0>) {
             p_engine_name: app_name_raw,
             engine_version: 0,
             api_version: ash::vk_make_version!(1, 0, 36),
-        };
+    };
 
-        let pp_extension_names = extension_names();
+    let pp_extension_names = extension_names();
 
-        println!("Creating InstanceCreateInfo...");
-        let create_info = vk::InstanceCreateInfo {
-            s_type: vk::StructureType::InstanceCreateInfo,
-            p_next: ptr::null(),
-            flags: Default::default(),
-            p_application_info: &appinfo,
-            pp_enabled_layer_names: ptr::null(),
-            enabled_layer_count: 0 as u32,
-            pp_enabled_extension_names: pp_extension_names.as_ptr(),
-            enabled_extension_count: pp_extension_names.len() as u32,
-        };
+    println!("Creating InstanceCreateInfo...");
+    let create_info = vk::InstanceCreateInfo {
+        s_type: vk::StructureType::InstanceCreateInfo,
+        p_next: ptr::null(),
+        flags: Default::default(),
+        p_application_info: &appinfo,
+        pp_enabled_layer_names: ptr::null(),
+        enabled_layer_count: 0 as u32,
+        pp_enabled_extension_names: pp_extension_names.as_ptr(),
+        enabled_extension_count: pp_extension_names.len() as u32,
+    };
 
-        println!("Creating instance...");
-        let entry = Entry::new().unwrap();
-        let instance: Instance<V1_0> = unsafe {
-            entry
-                .create_instance(&create_info, None)
-                .expect("Instance creation error")
-        };
-        // definition of `entry` at: https://docs.rs/ash/0.20.2/src/ash/entry.rs.html#51-54
+    println!("Creating instance...");
+    let entry = Entry::new().unwrap();
+    let instance: Instance<V1_0> = unsafe {
+        entry
+            .create_instance(&create_info, None)
+            .expect("Instance creation error")
+    };
+    // definition of `entry` at: https://docs.rs/ash/0.20.2/src/ash/entry.rs.html#51-54
 
-        (entry, instance)
-    }
+    (entry, instance)
+}
 }
 
 unsafe fn destroy_instance_and_panic(message: &str, instance: Instance<V1_0>) -> ! {
-    instance.destroy_instance(None);
-    panic!("panic: {}", message);
+instance.destroy_instance(None);
+panic!("panic: {}", message);
 }

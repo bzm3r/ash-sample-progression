@@ -65,7 +65,7 @@
 	\par\medskip}
 
 \let\oldquotation\quotation
-\renewenvironment{quotation}{\begin{indenttext}\fontfamily{ccr}\selectfont}{\end{indenttext}}
+\renewenvironment{quotation}{\begin{indenttext}\fontfamily{LinuxLibertineT-OsF}\selectfont}{\end{indenttext}}
 
 %============ BIBLIOGRAPHY =============
 \addbibresource{bibliography.bib}
@@ -73,7 +73,7 @@
 
 \begin{document}
 
-\title{Using Vulkan with Rust via "ash"}
+\title{Using Vulkan with Rust via \ash}
 \date{0.1}
 \author{Brian Merchant}
 \maketitle
@@ -83,7 +83,7 @@
 % -----------------------------------------
 
 \begin{abstract}
-    This document provides a Rust-based introduction to using Vulkan to create graphics. \href{https://github.com/MaikKlein/ash}{"ash"}, a Rust wrapper around the C Vulkan API, is used to build a series of small programs (\inquotes{samples}) which iterate upon one another towards a final goal of displaying a 3D cube.  
+    This document provides a Rust-based introduction to using Vulkan to create graphics. \href{https://github.com/MaikKlein/ash}{\ash}, a Rust wrapper around the C Vulkan API, is used to build a series of small programs (\inquotes{samples}) which iterate upon one another towards a final goal of displaying a 3D cube.  
 \end{abstract}
 
 \section{Setup}
@@ -129,9 +129,12 @@ Vulkan provides an interface between software applications and a Vulkan-compatib
 	\end{itemize}
 A physical device is Vulkan compatible if someone has written a \inquotes{driver} meant to organize communication between the physical device and Vulkan's internals. Thus, Vulkan standardizes communication between software and a wide variety of hardware.
 
-This interface between application and hardware drivers is called the \inquotes{loader}. Thus, to begin using Vulkan, a programmer initializes the loader. Vulkan's specification calls for both the loader and the drivers it communicates with to be highly specialized to facilitate communication between software and silicon, and extraneous capabilities (such as debugging conveniences) are provided through optional (chosen by the programmer) \inquotes{layers} which are placed between the loader-driver conduit.    
+Vulkan commands that form the interface between application and hardware drivers are brought into action by a \inquotes{loader}. Vulkan's specification calls for its core commands and the drivers they communicate with to be highly specialized for software-silicon crosstalk, so extraneous capabilities (such as debugging conveniences) are provided through optional (chosen by the programmer) \inquotes{layers} which are placed between the loader-driver conduit.    
 
 Thus, to begin, a programmer creates an \inquotes{instance} of the loader. Through this loader instance, they search system for physical devices with Vulkan-compatible drivers. They choose specific physical devices to work with, and set which optional features of the physical devices should be used (e.g. use 64-bit floats, or 32-bit floats?). For each physical device, the programmer defines one or more \inquotes{logical devices}: abstractions representing subsets of a physical device's resources. Each logical device is used to create \inquotes{queues}, which are selected from several types of \inquotes{queue families}. Not all physical devices may implement every type of queue family, as different queue families are specialized for transferring particular types/formats of information. Finally, the programmer enables Vulkan API \inquotes{extensions} which provide convenient functions to handle certain tasks they might be interested in (e.g. graphics display).
+
+From now on in this document, \inquotes{device} without qualification shall refer to a \inquotes{logical device} while a physical device will only be referred to in full as \inquotes{physical device}.
+
 
 \begin{quotation}
     Vulkan exposes one or more devices, each of which exposes one or more queues which may process work asynchronously to one another. The set of queues supported by a device is partitioned into families. Each family supports one or more types of functionality and may contain multiple queues with similar characteristics. Queues within a single family are considered compatible with one another, and work produced for a family of queues can be executed on any queue within that family. This Specification defines four types of functionality that queues may support: graphics, compute, transfer, and sparse memory management.
@@ -211,17 +214,17 @@ In "/init-instance/src/main.rs" we initialize a loader. Points to note and quest
 	\begin{itemize}
 		\item comments explaining \ril{use} statements
 		
-		\item \ril{unsafe} block: "ash" an almost one-to-one interface to the Vulkan C API, thus many of Rust's safety features have to be disabled
+		\item \ril{unsafe} block: \ash an almost one-to-one interface to the Vulkan C API, thus many of Rust's safety features have to be disabled
 		
 		\item for fields like \cil{pApplicationName} we create a \ril{std::ffi::CString} and then pass it \inquotes{raw} (i.e. as a pointer) by calling \ril{as_ptr}, rather than using the standard Rust \ril{String}
 		
 		\item \ril{vk::StructureType} is used to fill out \ril{s_type} fields
 		
-		\item can you explain how the \ril{flags} field is filled out? (hint: look up the definition of the \ril{vk::InstanceCreateInfo} "struct" in \href{https://docs.rs/ash}{"ash"'s documentation} and then answer: what type is \ril{flags}? How is the \ril{std::Default} trait implemented for it?)
+		\item can you explain how the \ril{flags} field is filled out? (hint: look up the definition of the \ril{vk::InstanceCreateInfo} "struct" in \href{https://docs.rs/ash}{\ash's documentation} and then answer: what type is \ril{flags}? How is the \ril{std::Default} trait implemented for it?)
 		
 		\item that to actually use Vulkan, we first initialize an \ril{ash::Entry} "struct" which contains the supporting infrastructure to allow Rust to interface with Vulkan's C implementation
 		
-		\item the \ril{ash::Entry} "struct" also has some \ril{impl}s which put syntactic sugar around calling functions like \ril{vkCreateInstance}, in particular the function \ril{create_instance}---can you find where that function is implemented? (hint: open up \href{https://docs.rs/ash}{"ash"'s documentation}, and 1) figure out where the \ril{EntryV1_0} trait is defined, 2) figure out where \ril{Entry<V>} is defined, and 3) how is the \ril{EntryV1_0} implemented for \ril{Entry<V1_0>}?)
+		\item the \ril{ash::Entry} "struct" also has some \ril{impl}s which put syntactic sugar around calling functions like \ril{vkCreateInstance}, in particular the function \ril{create_instance}---can you find where that function is implemented? (hint: open up \href{https://docs.rs/ash}{\ash's documentation}, and 1) figure out where the \ril{EntryV1_0} trait is defined, 2) figure out where \ril{Entry<V>} is defined, and 3) how is the \ril{EntryV1_0} implemented for \ril{Entry<V1_0>}?)
 		
 		\item we have to manually destroy the instance once we're done
 	\end{itemize} 
@@ -231,71 +234,52 @@ To see everything in action:
 		"cargo run --bin init-instance"
 	\end{center}
 	
-\section{\texttt{enumerate-devices.rs}}
-	Now that we know how to initialize an instance, let us learn how to use it to enumerate the physical devices on our system. In general, obtaining a list of stuff is a fairly common operation in Vulkan, so there's a generalized pattern behind what we want to do on the C side of things. Say you have a function \cil{getListData} to get a list of some stuff from some instance of a "struct" \cil{aStruct}:
-		\begin{itemize}
-			\item \cil{getListData} will have prototype:
-				\begin{minted}{rust}
-vkResult get_list_data(
-	vkSomeStruct 	aStruct,
-	uint32_t*		pCount,
-	vkStuff*		pStuff,	
-);
-				\end{minted}
-			\item get a pointer to some memory set aside for an unsigned 32 bit integer, and call it \cil{pCount}
-			
-			\item call \cil{getListData(aStruct, pCount, NULL)}---the \cil{NULL} pointer for \cil{pStuff} indicates that we don't yet know how many things will be in the list, so we want that information to be put in the memory pointed to by \cil{pCount}, and if the \cil{vkResult} we get back after the call indicates success, \cil{pCount} will point to an integer representing the number of \cil{vkStuff} we need to set aside memory for
-			
-			\item set aside appropriate memory for the list of \cil{vkStuff} (now that we know the count), and get a pointer to that list called \cil{pStuff}
-			
-			\item call \cil{getListData(aStruct, pCount, pStuff)}---this time, because \cil{pStuff} is not \cil{NULL}, and the \cil{getListData} will fill out the list pointed to by \cil{pStuff}, instead of writing information about the count
-		\end{itemize}
-
-	Thus, based on this model, the function prototype for \cil{vkEnumeratePhysicalDevices} should look familiar:
+\section{1: \texttt{enumerate-devices.rs}}
+	Obtaining a list of information from the loader is a common operation, and in the course of this tutorial, we will note that there is a pattern to how the API handles these operations. The pattern is well demonstrated by the next task: querying the loader for a list of available Vulkan-compatible physical devices on the host system. We call the function \cil{vkEnumeratePhysicalDevices}, which has prototype
 	\begin{minted}{c}
 VkResult vkEnumeratePhysicalDevices(
 	VkInstance                                  instance,
 	uint32_t*                                   pPhysicalDeviceCount,
 	VkPhysicalDevice*                           pPhysicalDevices);
 	\end{minted}
-	Assume we have a \cil{vkInstance} called \cil{instance} at hand and a pointer to memory where we can store an unsigned integer \cil{pPhysicalDeviceCount}. Then, we would:
+    
+    The specification explains the function's arguments succinctly:
+        \begin{quotation}
+            If "pPhysicalDevices" is "NULL", then the number of physical devices available is returned in "pPhysicalDeviceCount". Otherwise, "pPhysicalDeviceCount" must point to a variable set by the user to the number of elements in the "pPhysicalDevices" array, and on return the variable is overwritten with the number of handles actually written to "pPhysicalDevices". If "pPhysicalDeviceCount" is less than the number of physical devices available, at most "pPhysicalDeviceCount" structures will be written. If "pPhysicalDeviceCount" is smaller than the number of physical devices available, "VK_INCOMPLETE" will be returned instead of "VK_SUCCESS", to indicate that not all the available physical devices were returned.
+        \end{quotation}
+    
+    Assume we have a \cil{vkInstance} called \cil{instance} created, as explained in the last section, and a pointer to memory where we can store an unsigned integer \cil{pPhysicalDeviceCount}. Then, for our purposes, we would:
 		\begin{enumerate}
-			\item call \cil{vkEnumeratePhysicalDevices(instance, pPhysicalDeviceCount, NULL)}---if \cil{vkResult} indicates success, then \cil{pPhysicalDeviceCount} now points to an integer denoting the number of physical devices available
+            \item call \cil{vkEnumeratePhysicalDevices(instance, pPhysicalDeviceCount, NULL)} since we do not have a pre-existing array of devices, and are interested in finding out how many such devices exist; if \cil{vkResult} indicates success ("VK_SUCCESS" is returned), then \cil{pPhysicalDeviceCount} now points to an integer counting the number of physical devices available otherwise the specification states we get errors "VK_ERROR_OUT_OF_HOST_MEMORY", "VK_ERROR_OUT_OF_DEVICE_MEMORY", "VK_ERROR_INITIALIZATION_FAILED"
 			
-			\item allocate enough memory for a list of \cil{VkPhysicalDevice}s containing \cil{*pPhysicalDeviceCount} items (in C-ish the list would be of type \cil{VkPhysicalDevice*}), and call it \cil{pPhysicalDevices} (the preceding "p" indicates \inquotes{pointer} in C-ish naming conventions)
+			\item assuming success, create an empty array of \cil{VkPhysicalDevice}s containing enough space for \cil{*pPhysicalDeviceCount} items "pPhysicalDevices" ("p" in the variable name stands for \inquotes{pointer})
 			
-			\item call \cil{vkEnumeratePhysicalDevices(instance, pPhysicalDeviceCount, pPhysicalDevices}---if \cil{vkResult} indicates success, then our list \cil{pPhysicalDevices} should be properly filled out with the \cil{vkPhysicalDevice}s.
+			\item call \cil{vkEnumeratePhysicalDevices(instance, pPhysicalDeviceCount, pPhysicalDevices}---if \cil{vkResult} indicates success, then our list \cil{pPhysicalDevices} should be filled out with the \cil{vkPhysicalDevice}s
 		\end{enumerate}
 	
-	How would we do this in Rust? The \ril{ash::Instance} "struct" has an \ril{impl} function \ril{ash::Instance::enumerate_physical_devices}, which calls \cil{vkEnumeratePhysicalDevices} for us and returns a vector of \ril{vk::PhysicalDevice}s. Have a look at how it works: \href{https://gist.github.com/bzm3r/175cd2b63db8f783ed968df20462be67}{gist link for annotated \ril{enumerate_physical_devices}}. To find the source for yourself, go to "ash"'s documentation for \ril{ash::Instance}, and click the appropriate "[src]" links. You can see that under the hood, "ash" follows exactly the pattern we noted above. 
+	In Rust-land, the \ril{ash::Instance} "struct" has an \ril{impl} function \ril{ash::Instance::enumerate_physical_devices}, which calls \cil{vkEnumeratePhysicalDevices} and returns a vector of \ril{vk::PhysicalDevice}s. The reader should look at the source code of this function:  \href{https://gist.github.com/bzm3r/175cd2b63db8f783ed968df20462be67}{gist link for annotated \ril{enumerate_physical_devices}}. To find the source, go to \ash's documentation for \ril{ash::Instance}, and click the appropriate "[src]" links. You can see that under the hood, \ash performs the operations we outlined above. 
 	
-	Have a look at "enumerate-devices.rs", where we query for the list of the physical devices on our system, and print out how many we found. So, to figure out how many physical devices are on your system run "enumerate-devices.rs": 
+	"enumerate-devices.rs" contains the code to enumerate physical devices on a system and print out how many were found. Note that before the program panics intentionally, care is taken to ensure that any instances we create are destroyed with the help of the \ril{unsafe} function \ril{destroy_instance_and_panic}. Run the program with the command: 
 		\begin{center}
 			"cargo run --bin enumerate-devices"
 		\end{center}
+    
 	
-\section{\texttt{init-device.rs}}
-	
-	\subsection{\texttt{init-device-0.rs}}
-		So far, we know how to create an instance, which allows our application to communicate with underlying physical devices that provide a Vulkan-compatible driver. In particular, we know how to use the instance to query if there are any such physical devices. 
+\section{2: \texttt{init-device.rs}}
+
+    The rest of this document assumes the at least one physical device exists on the host system. Creation of logical device abstractions over found physical devices will now be explored. Apart from organizing available physical resources, a logical device allows for the creation of queues which pass data between applications and physical devices. 
 		
-		The rest of this tutorial is assuming you found at least one physical device on your system. If you haven't found one, do you have Vulkan-compatible drivers installed for your CPU/GPU, and is your CPU/GPU new enough to support Vulkan functionality? You'll have to do some trouble shooting here. 
-		
-		Assuming that you have found at least one such physical device, we will now learn how to create the logical device abstraction over this physical device. Recall that the logical device allows us to eventually create queues which pass data between your application and the physical device. 
-		
-		For the sake of simplicity, we'll just choose the first (perhaps only) device we've found. Let's ask the physical device what sort of queue families it supports. We do so by by calling the C function \cil{vkGetPhysicalDeviceQueueFamilyProperties} which has prototype:
-			\begin{minted}{c}
+	For the sake of simplicity, let us select the first (perhaps only) physical device found. What queue families (types of queues) does it support? The list of available queue families can be obtained by calling \cil{vkGetPhysicalDeviceQueueFamilyProperties}, which has prototype:
+		\begin{minted}{c}
 void vkGetPhysicalDeviceQueueFamilyProperties(
 	VkPhysicalDevice                            physicalDevice,
 	uint32_t*                                   pQueueFamilyPropertyCount,
 	VkQueueFamilyProperties*                    pQueueFamilyProperties);
-			\end{minted}
-		Note that this function has the same organization as a function which can either give information about the number of some objects of interest, or provide a list of the same objects of interest. In the last section, we discussed how such a function would be used, and we simply need to repeat that process in order to get a list of \cil{VkQueueFamilyProperties}.
+		\end{minted}
+	This function has the same organization as "vkEnumeratePhysicalDevices" seen in the previous section: after all, it too returns a list of data. Thus, similar to \ril{ash::Instance::enumerate_physical_devices}, \ash wraps the querying process in the "impl" function \ril{ash::Instance::get_physical_device_queue_family_properties}. Examining this function's source will reveal its similarities to \ril{ash::Instance::enumerate_physical_devices}. A successful call to \cil{get_physical_device_queue_family_properties} provides a list:  \ril{Vec<vk_sys::QueueFamilyProperties>}.
 		
-		Again, similar to \ril{ash::Instance::enumerate_physical_devices} discussed in the last section, "ash" makes our life easy by giving us an \ril{impl} function on \ril{ash::Instance} which does performs the details of getting a list of \ril{vk_sys::QueueFamilyProperties}: \ril{ash::Instance::get_physical_device_queue_family_properties}. If you examine its source (recall how we found the source for \ril{ash::Instance::enumerate_physical_devices}) you'll see the similarities between the functions. Upon a successful call to \cil{get_physical_device_queue_family_properties}, we get a \ril{Vec<vk_sys::QueueFamilyProperties>}.
-		
-		What's inside C-ish \cil{vkQueueFamilyProperties}?
-	\begin{minted}{c}
+	What's inside C-ish \cil{vkQueueFamilyProperties}?
+	   \begin{minted}{c}
 typedef struct VkQueueFamilyProperties {
 	VkQueueFlags    queueFlags;
 	uint32_t        queueCount;
@@ -309,51 +293,38 @@ typedef enum VkQueueFlagBits {
 	VK_QUEUE_TRANSFER_BIT = 0x00000004,
 	VK_QUEUE_SPARSE_BINDING_BIT = 0x00000008,
 } VkQueueFlagBits;
-	\end{minted}
-	
-		We'll only look at some of the members in detail for now:
-			\begin{itemize}
-				\item \cil{queueCount}: unsigned integer specifying how many queues this device has 
-				\item \cil{vkQueueFlags} is a bit mask of one or more \cil{VkQueueFlagBits} specifying the capabilities of the queues in this family (e.g. graphics queues specialize in handling graphics-related operations, while transfer queues specialize in transferring data between application and device).
-			\end{itemize}
+	   \end{minted}
+		\begin{itemize}
+			\item \cil{queueCount}: unsigned integer specifying how many queues this device has 
+			\item \cil{vkQueueFlags}: a bit mask of one or more \cil{VkQueueFlagBits} specifying the capabilities of queues in this family (some or all of Graphics, Compute, Transfer or Sparse).
+		\end{itemize}
 		
-		The bit mask stuff is also important in Rust-land. "ash" has a special type for the bits, \ril{ash::types::QueueFlags}, which allow bitwise operations on them too. So, here's what's going on with the bit mask stuff:
-			\begin{itemize}
-				\item converting from hexadecimal to binary:
-					\begin{align*}
-						\mathtt{0x1} &\rightarrow 000\underline{1} && \text{Graphics}\\
-						\mathtt{0x2} &\rightarrow 00\underline{1}0 && \text{Compute}\\
-						\mathtt{0x3} &\rightarrow 0\underline{1}00 && \text{Transfer}\\
-						\mathtt{0x4} &\rightarrow \underline{1}000 && \text{Sparse}
-					\end{align*}
-				
-				\item so if I gave you a flag "0xF", in binary that is $1111$, and this would mean that that queue family supports Graphics, Compute, Transfer, and Sparse operations
-				
-				\item but if I gave you "0x5", in binary that is $0101$, this would mean that the queue family only supports Graphics and Transfer operations
-			\end{itemize}
+	\ash has a special type for these flag bits, \ril{ash::types::QueueFlags}, which also allow bitwise operations. Thus, we can convert the returned flag from hexadecimal to binary to determine the queue family's capabilities:
+    	\begin{align*}
+    		\mathtt{0x1} &\rightarrow 000\underline{1} && \text{Graphics}\\
+    		\mathtt{0x2} &\rightarrow 00\underline{1}0 && \text{Compute}\\
+    		\mathtt{0x3} &\rightarrow 0\underline{1}00 && \text{Transfer}\\
+    		\mathtt{0x4} &\rightarrow \underline{1}000 && \text{Sparse}
+    	\end{align*}
+     For example, the flag "0xF" is $1111$ in binary, meaning that the queue family supports Graphics, Compute, Transfer, and Sparse operations, while flag "0x5", in binary is $0101$, meaning that only Graphics and Transfer operations are supported.
+         
+	To test whether a particular bit is set (i.e. is $1$), the \ril{subset} \ril{impl} for \ril{ash::types::QueueFlags} can be used, as demonstrated by  \ril{get_queue_family_supported_ops} in "init-device-0.rs". This program prints out queue families supported by the first physical device in the list of physical devices available on the host system.
 		
-		To test whether a particular bit is set (i.e. is $1$), we can use the \ril{subset} \ril{impl} for \ril{ash::types::QueueFlags}. See how \ril{get_queue_family_supported_ops} function tests for this in "init-device-0.rs". Also, note that before the program panics intentionally, care is taken to ensure that any instances we create are destroyed with the help of the \ril{unsafe} function \ril{destroy_instance_and_panic}.
+\subsection{\texttt{init-device-and-queues.rs}}
+	In "init-device-1", "init-device-0" is iterated upon by by adding functionality to choose a physical device which has a queue family with graphics capability, since the tutorial ultimately aims to display a cube. One an appropriate physical device has been chosen, a \emph{logical device} is created on it, which will be used to create a queue from the graphics family. A broad outline for executing this procedure using the C-ish API is:
+		\begin{enumerate}
+			\item fill out a \cil{VkDeviceQueueCreateInfo} "struct" based on the queue family selected for each queue that will be created, and store each such "struct" in an array, perhaps called \cil{pQueueCreateInfos}
 				
-		When you run "init-device-0.rs", you should see a print out of all the queue families supported by the first physical device in the list of physical devices available to you. 
+			\item fill out a \cil{VkDeviceCreateInfo} "struct", which amongst other members, requires \cil{pQueueCreateInfos}
+                
+			\item call \cil{vkCreateDevice}, which takes as an argument \cil{VkDeviceCreateInfo}, and will create \cil{vkDevice} upon success
+				
+			\item perform any tasks we need to with the resulting \cil{vkDevice}
+				
+			\item destroy the device
+		\end{enumerate}
 		
-	\subsection{\texttt{init-device-1.rs}}
-		In the last section, we described "init-device-0.rs", which allowed us to print out a list of queue families available for one physical device on our system. In "init-device-1", we will iterate upon "init-device-0", and choose a physical device which has a queue family with graphics capability (recall that the ultimate aim of the samples progression is to display a cube, which is undoubtedly a graphics operation).
-		
-		Once we choose the appropriate physical device, and the appropriate queue family from the device, we will set about creating a \emph{logical device}, which will have a queue from the queue family of interest. Here's a broad outline of the steps we'd follow if we were using the C-ish API:
-			\begin{enumerate}
-				\item fill out a \cil{VkDeviceQueueCreateInfo} "struct" based on queue family selected for each queue we want to create (i.e. we would form a list of such "struct"s)
-				
-				\item fill out a \cil{VkDeviceCreateInfo} "struct", which amongst other members, has \cil{pQueueCreateInfos}: a pointer to a list of \cil{VkDeviceQueueCreateInfo} "struct"s (one for each queue we want to create)
-				
-				\item call \cil{vkCreateDevice}, with the \cil{VkDeviceCreateInfo} "struct" we filled out as one of the "struct"s, to create a \cil{vkDevice} upon success
-				
-				\item perform any tasks we need to with the resulting \cil{vkDevice}
-				
-				\item destroy the device
-			\end{enumerate}
-		From now on in this tutorial, whenever you read \inquotes{device} without qualification, assume it means \inquotes{logical device}. I will always refer to a physical device as \inquotes{physical device}.
-		
-		Let's have a look at \cil{VkDeviceQueueCreateInfo}:
+	Let us look at \cil{VkDeviceQueueCreateInfo}:
 \begin{minted}{c}
 typedef struct VkDeviceQueueCreateInfo {
 	VkStructureType             sType;
@@ -364,62 +335,58 @@ typedef struct VkDeviceQueueCreateInfo {
 	const float*                pQueuePriorities;
 } VkDeviceQueueCreateInfo;
 \end{minted}
-		Relevant members of this "struct" are:
-			\begin{itemize}
-				\item \cil{flags}: for future (as in, future versions of Vulkan) use, set to 0 in the present
-				
-				\item \cil{queueFamilyIndex}: the index of the queue's queue family properties in the list of \cil{vkQueueFamilyProperties} for the physical device we will create a logical device for;
-				
-				\item \cil{queueCount}: the number of queues we'd like to create (shouldn't be greater than the number of queues supported by the physical device for this queue's queue family properties!)
-				
-				\item \cil{pQueuePriorities}: a list of \cil{queueCount} normalized floating point values (i.e. "float"s between 0.0 and 1.0), denoting the relative priority of each queue we're creating. Higher values indicate a higher priority (0.0 is lowest, 1.0 is highest), and within the physical device, queues with higher priority will have a higher chance of being allotted more processing time than queues with lower priority; more on this later
-			\end{itemize}
+	\begin{itemize}
+		\item \cil{flags}: for use by future Vulkan versions, set to 0 
+			
+		\item \cil{queueFamilyIndex}: index of the queue's queue family properties in the array \cil{vkQueueFamilyProperties}
+			
+		\item \cil{queueCount}: the number of queues to be created (shouldn't be greater than the number of queues supported by the physical device, as specified in the queue family's properties!)
+			
+		\item \cil{pQueuePriorities}: an array of \cil{queueCount} normalized floating point values (i.e. "float"s between 0.0 and 1.0), denoting the relative priority of each queue we're creating: 0.0 is lowest priority, 1.0 is highest; within the physical device, queues with higher priority will have a higher chance of being allotted more processing time than queues with lower priority; more on this later
+	\end{itemize}
 		
-		Let's have a look at the \cil{VkDeviceCreateInfo} "struct":
-\begin{minted}{c}
+	The "struct" \cil{VkDeviceCreateInfo} is defined like:
+    \begin{minted}{c}
 typedef struct VkDeviceCreateInfo {
-VkStructureType                    sType;
-const void*                        pNext;
-VkDeviceCreateFlags                flags;
-uint32_t                           queueCreateInfoCount;
-const VkDeviceQueueCreateInfo*     pQueueCreateInfos;
-uint32_t                           enabledLayerCount;
-const char* const*                 ppEnabledLayerNames;
-uint32_t                           enabledExtensionCount;
-const char* const*                 ppEnabledExtensionNames;
-const VkPhysicalDeviceFeatures*    pEnabledFeatures;
-} VkDeviceCreateInfo;
+    VkStructureType                    sType;
+    const void*                        pNext;
+    VkDeviceCreateFlags                flags;
+    uint32_t                           queueCreateInfoCount;
+    const VkDeviceQueueCreateInfo*     pQueueCreateInfos;
+    uint32_t                           enabledLayerCount;
+    const char* const*                 ppEnabledLayerNames;
+    uint32_t                           enabledExtensionCount;
+    const char* const*                 ppEnabledExtensionNames;
+    const VkPhysicalDeviceFeatures*    pEnabledFeatures;
+    } VkDeviceCreateInfo;
 \end{minted}
-		Relevant members are:
-			\begin{itemize}
-				\item \cil{queueCreateInfoCount}: how many queue groups are going to be associated with this logical device (each group will have its own \cil{vkDeviceQueueCreateInfo} "struct")
-				
-				\item \cil{pQueueCreateInfos}: list of \cil{vkDeviceQueueCreateInfo} "struct"s 
-				(count given by \cil{queueCreateInfoCount})
-				
-				\item \cil{enabledLayerCount} and \cil{ppEnabledLayerNames}: deprecated and ignored
-				
-				\item \cil{enabledExtensionCount} and \cil{ppEnabledExtensionNames}: to be discussed later, for now we'll put in \cil{0} and \cil{NULL} respectively
-				
-				\item \cil{pEnabledFeatures}: to be discussed later, \cil{NULL} for now
-			\end{itemize}
-		Already we are getting hints of more advanced features available to us, such as Vulkan API extensions which can add functionality to the API in order to handle specialized tasks, or physical device features (e.g. 64 bit capability). We won't be worrying about these advanced features for now.
+	\begin{itemize}
+		\item \cil{queueCreateInfoCount}: how many queue groups are to be associated with this logical device (each group will have its own \cil{vkDeviceQueueCreateInfo} "struct")
+			
+		\item \cil{pQueueCreateInfos}: list of \cil{vkDeviceQueueCreateInfo} "struct"s (count given by \cil{queueCreateInfoCount})
+			
+		\item \cil{enabledLayerCount} and \cil{ppEnabledLayerNames}: deprecated and ignored
+			
+   		\item \cil{enabledExtensionCount} and \cil{ppEnabledExtensionNames}: to be discussed later in the document, for now \cil{0} and \cil{NULL} respectively
+   		
+   		\item \cil{pEnabledFeatures}: to be discussed later in the document, for now \cil{NULL}
+   	\end{itemize}
+	
+    Hints of more advanced features available, such as Vulkan API extensions or optional physical device features are beginning to appear, but we ignore these for the time being.
 		
-		The analogues of \cil{VkDeviceQueueCreateInfo} and \cil{VkDeviceCreateInfo} in "ash" are \ril{vk::DeviceQueueCreateInfo} (\href{https://docs.rs/ash/0.20.2/ash/vk/types/struct.DeviceQueueCreateInfo.html}{docs}) and \ril{vk::DeviceCreateInfo} (\href{https://docs.rs/ash/0.20.2/ash/vk/types/struct.DeviceCreateInfo.html}{docs}) respectively. In "init-device-1.rs", we select a physical device which has a queue family with graphics capability, fill out \ril{vk::DeviceQueueCreateInfo} and \ril{vk::DeviceCreateInfo} respectively, and then call \ril{ash::Instance::create_device} to create a device. Upon exit, we clean up by destroying the created device, and the instance. 
+	The analogues of \cil{VkDeviceQueueCreateInfo} and \cil{VkDeviceCreateInfo} in \ash are \ril{vk::DeviceQueueCreateInfo} (\href{https://docs.rs/ash/0.20.2/ash/vk/types/struct.DeviceQueueCreateInfo.html}{docs}) and \ril{vk::DeviceCreateInfo} (\href{https://docs.rs/ash/0.20.2/ash/vk/types/struct.DeviceCreateInfo.html}{docs}) respectively. "init-device-1.rs" selects a physical device graphics capable queue families, fills out \ril{vk::DeviceQueueCreateInfo} and \ril{vk::DeviceCreateInfo}, and then calls \ril{ash::Instance::create_device}. Before exiting, it cleans up by destroying the created device, and the underlying loader instance. This example only creates one queue, but if more were to be created, we would provide a Rust array or vector of \ril{vk::DeviceQueueCreateInfo} in raw pointer form through \ril{.as_ptr}. This provides a C-ish style list of objects, which can be accessed through offsetting of the pointer.
 		
-		Do note one important thing: we are only making one queue in the example, but if we were making more than one queue, we would provide either a Rust array or vector of \ril{vk::DeviceQueueCreateInfo} with \ril{.as_ptr}. This provides a C-ish style list of objects, which can be accessed by offsetting the pointer.
-		
-		Make sure to study the code in "init-device-1.rs" and then run it:
-			\begin{center}
-				"cargo run --bin init-device-1"
-			\end{center}
-		
+	Study the code in "init-device-and-queue.rs" and then run it:
+    	\begin{center}
+    		"cargo run --bin init-device-and-queue"
+    	\end{center}
+      
 \section{\texttt{init-command-buffer.rs}}
-	Unlike other APIs which send commands (memory transfer commands, draw commands, etc.) directly to the physical device's drivers, Vulkan records commands in a command buffer, which are then submitted using queues to the physical device's driver, which in turn handles the organization of the execution of instructions in the command buffer---in other words, Vulkan splits the recording of commands from the submission of commands. The benefit of such a system is that it allows drivers to better manage resources, since it has some idea of the work it is going to have to do.
+	Using Vulkan, application records commands in a command buffer, which are then transmitted to underlying drivers Since instructions are given in batches from a buffer, drivers are able to further optimize execution, as they have some fore-knowledge of future instructions.
+    
+	However, creating and destroying individual command buffers manually can be expensive, so Vulkan utilizes the abstraction of \inquotes{command buffer pools}, which manage the creation and destruction of command buffers using \inquotes{pool allocators}. In addition, pools manage sending large groups of (small) command buffers with increased efficiency. Every command buffer pool is associated with a particular queue family on the physical device, since drivers allocate pools based on the type of queue family.
 	
-	Creating and destroying individual command buffers can be expensive, Vulkan utilizes the abstraction of \inquotes{command buffer pools}, which manage the creation and destruction of command buffers more efficiently through the use of specialized pool allocators. Furthermore, pools can manage sending large groups of (small) command buffers with increased efficiency, as there are inefficiencies in sending small command buffers. It is important to note that a command buffer pool is associated with one particular queue family on some physical device, since the driver allocates pools based on details specified by queue family.
-	
-	To create a command buffer pool, we need to fill out a \cil{vkCommandPoolCreateInfo} "struct", and then submit it to a \cil{vkCreateCommandPool} function. Let's have a look at \cil{vkCommandPoolCreateInfo}:
+	To create a command buffer pool, a \cil{vkCommandPoolCreateInfo} "struct" is submitted to the \cil{vkCreateCommandPool} function:
 	\begin{minted}{c}
 typedef struct VkCommandPoolCreateInfo {
 	VkStructureType             sType;
@@ -427,6 +394,12 @@ typedef struct VkCommandPoolCreateInfo {
 	VkCommandPoolCreateFlags    flags;
 	uint32_t                    queueFamilyIndex;
 	} VkCommandPoolCreateInfo;
+
+VkResult vkCreateCommandPool(
+    VkDevice                                    device,
+    const VkCommandPoolCreateInfo*              pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
+    VkCommandPool*                              pCommandPool)
 	\end{minted}
 		\begin{itemize}
 			\item \cil{sType}: set to \cil{VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO}
@@ -440,18 +413,9 @@ typedef struct VkCommandPoolCreateInfo {
 					\item \cil{VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT} (0x2): when a command buffer is first allocated is in the initial state, and command pools with the reset bit set allow buffers from the pool to be reset to their initial state
 				\end{itemize}
 			
-			\item \cil{queueFamilyIndex}: index of the queue family that the command pool will be associated with (queue families are associated with a particular device, and the device in question is specified when calling \cil{vkCreateCommandPool})
-		\end{itemize}
-	Let's have a look at the function prototype for \cil{vkCreateCommandPool}:
-		\begin{minted}{c}
-VkResult vkCreateCommandPool(
-	VkDevice                                    device,
-	const VkCommandPoolCreateInfo*              pCreateInfo,
-	const VkAllocationCallbacks*                pAllocator,
-	VkCommandPool*                              pCommandPool)
-		\end{minted}
-		\begin{itemize}
-			\item \cil{device}: logical device that will create the command pool
+			\item \cil{queueFamilyIndex}: index of the queue family that the command pool will be associated with 
+            
+			\item \cil{device}: logical device which will manage creating the command pool
 			
 			\item \cil{pCreateInfo}: a pointer to a filled out \cil{vkCreateCommandPool} "struct"
 			
@@ -459,9 +423,8 @@ VkResult vkCreateCommandPool(
 			
 			\item \cil{pCommandPool}: a pointer to a \cil{vkCommandPool}, which \cil{vkCreateCommandPool} will associate with the newly created pool
 		\end{itemize}
-	In a previous section, we identified a graphics capable queue family, and will associate our command pool with it.
-	
-	Once we have a command pool we store it in a \cil{VkCommandBufferAllocateInfo} "struct", which we can use along with a \cil{vkAllocateCommandBuffers} call to create (allocate) command buffers. Let's have a look at \cil{VkCommandBufferAllocateInfo}:
+    
+	Once we have a command pool,  we store it in a \cil{VkCommandBufferAllocateInfo} "struct", which is submitted to a call of \cil{vkAllocateCommandBuffers}:
 		\begin{minted}{c}
 typedef struct VkCommandBufferAllocateInfo {
 	VkStructureType         sType;
@@ -470,7 +433,13 @@ typedef struct VkCommandBufferAllocateInfo {
 	VkCommandBufferLevel    level;
 	uint32_t                commandBufferCount;
 	} VkCommandBufferAllocateInfo;
+    
+VkResult vkAllocateCommandBuffers(
+    VkDevice                                    device,
+    const VkCommandBufferAllocateInfo*          pAllocateInfo,
+    VkCommandBuffer*                            pCommandBuffers);
 		\end{minted}
+        
 		\begin{itemize}
 			\item \cil{sType}: set to \cil{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO}
 			
@@ -481,22 +450,13 @@ typedef struct VkCommandBufferAllocateInfo {
 			\item \cil{level}: the "enum" \cil{VkCommandBufferLevel} has values \cil{VK_COMMAND_BUFFER_LEVEL_PRIMARY} and \cil{VK_COMMAND_BUFFER_LEVEL_SECONDARY}, which specify whether this command buffer is primary or secondary. A primary command buffer can be submitted to a queue but cannot be called by another command buffer, while a secondary command buffer cannot be submitted to a queue, but can be called by another command buffer. 
 			
 			\item \cil{commandBufferCount}: how many buffers to make with these settings
-		\end{itemize}
-	Let's have a look at the function pointer for \cil{vkAllocateCommandBuffers}:
-		\begin{minted}{c}
-VkResult vkAllocateCommandBuffers(
-	VkDevice                                    device,
-	const VkCommandBufferAllocateInfo*          pAllocateInfo,
-	VkCommandBuffer*                            pCommandBuffers);
-		\end{minted}
-		\begin{itemize}
+
 			\item \cil{vkDevice}: the device with which the command pool is associated
 			
 			\item \cil{pAllocateInfo}: pointer to a filled out \cil{VkCommandBufferAllocateInfo} struct
 			
 			\item \cil{VkCommandBuffer}: a pointer to an array of \cil{VkCommandBuffer}s where the newly created command buffers will be stored (so, the array should have length at least \cil{commandBufferCount} set in the \cil{VkCommandBufferAllocateInfo} "struct")
 		\end{itemize}
-	Note that once a command pool is created, it must also be destroyed.
 	
 	Let's now turn our attention to Rust and \ash, where we'd follow (similar to C-ish) the following steps to create a command pool, and then command buffers associated with that pool:
 		\begin{enumerate}

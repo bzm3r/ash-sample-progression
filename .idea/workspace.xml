@@ -2,14 +2,10 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="2ced3f24-814b-4148-8cac-23aa8d64119d" name="Default" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/dictionaries/Brian_Merchant.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/bin/enumerate-devices.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/bin/enumerate-devices.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/bin/init-command-buffer.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/bin/init-command-buffer.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/bin/init-device-0.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/bin/init-device-0.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/bin/init-device-1.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/bin/init-device-1.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/bin/init-instance.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/bin/init-instance.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/bin/init-swap-chain.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/bin/init-swap-chain.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/bin/init-device-0.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/bin/init-device.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/bin/init-device-1.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/bin/init-device-and-queue.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tutorial-doc/ash-tutorial.pdf" beforeDir="false" afterPath="$PROJECT_DIR$/tutorial-doc/ash-tutorial.pdf" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tutorial-doc/ash-tutorial.tex" beforeDir="false" afterPath="$PROJECT_DIR$/tutorial-doc/ash-tutorial.tex" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tutorial-doc/ash-tutorial.toc" beforeDir="false" afterPath="$PROJECT_DIR$/tutorial-doc/ash-tutorial.toc" afterDir="false" />
@@ -23,21 +19,25 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="enumerate-devices.rs" pinned="false" current-in-tab="false">
+      <file leaf-file-name="enumerate-devices.rs" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/bin/enumerate-devices.rs">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="228">
-              <caret line="12" column="1" selection-start-line="12" selection-start-column="1" selection-end-line="12" selection-end-column="1" />
+            <state relative-caret-position="239">
+              <caret line="25" column="10" selection-start-line="25" selection-start-column="10" selection-end-line="25" selection-end-column="10" />
+              <folding>
+                <element signature="e#982#983#0" expanded="true" />
+                <element signature="e#1012#1013#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="init-device-0.rs" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/bin/init-device-0.rs">
+      <file leaf-file-name="init-device.rs" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/bin/init-device.rs">
           <provider selected="true" editor-type-id="text-editor" />
         </entry>
       </file>
-      <file leaf-file-name="init-instance.rs" pinned="false" current-in-tab="true">
+      <file leaf-file-name="init-instance.rs" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/bin/init-instance.rs">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="209">
@@ -63,8 +63,8 @@
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/src/bin/enumerate-devices.rs" />
         <option value="$PROJECT_DIR$/src/bin/init-instance.rs" />
+        <option value="$PROJECT_DIR$/src/bin/enumerate-devices.rs" />
       </list>
     </option>
   </component>
@@ -205,10 +205,14 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="228">
           <caret line="12" column="1" selection-start-line="12" selection-start-column="1" selection-end-line="12" selection-end-column="1" />
+          <folding>
+            <element signature="e#982#983#0" expanded="true" />
+            <element signature="e#1012#1013#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/bin/init-device-0.rs">
+    <entry file="file://$PROJECT_DIR$/src/bin/init-device.rs">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
     <entry file="file://$USER_HOME$/.cargo/registry/src/github.com-1ecc6299db9ec823/winit-0.9.0/src/lib.rs">
@@ -246,20 +250,24 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/bin/enumerate-devices.rs">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="228">
-          <caret line="12" column="1" selection-start-line="12" selection-start-column="1" selection-end-line="12" selection-end-column="1" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/bin/init-device-0.rs">
+    <entry file="file://$PROJECT_DIR$/src/bin/init-device.rs">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
     <entry file="file://$PROJECT_DIR$/src/bin/init-instance.rs">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="209">
           <caret line="23" column="34" selection-start-line="23" selection-start-column="34" selection-end-line="23" selection-end-column="34" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/bin/enumerate-devices.rs">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="239">
+          <caret line="25" column="10" selection-start-line="25" selection-start-column="10" selection-end-line="25" selection-end-column="10" />
+          <folding>
+            <element signature="e#982#983#0" expanded="true" />
+            <element signature="e#1012#1013#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
