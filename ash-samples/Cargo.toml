@@ -1,6 +1,7 @@
 [package]
-name = "ash_samples"
+name = "ash-samples"
 version = "0.1.0"
 authors = ["Brian Merchant <bhmerchant@gmail.com>"]
 
 [dependencies]
+ash = "0.24.3"

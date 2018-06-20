@@ -1,15 +1,20 @@
-extern crate ashtutorial;
+extern crate ash_samples;
+extern crate ash;
+
+use ash::Entry;
+use ash::Instance;
+use ash::version::{EntryV1_0, InstanceV1_0, V1_0};
 
 // please look at ash-tutorial.pdf for further information!
 fn main() {
     unsafe {
-        let (entry, instance): (Entry<V1_0>, Instance<V1_0>) = init_instance();
+        let (_entry, instance): (Entry<V1_0>, Instance<V1_0>) = ash_samples::init_instance("enumerate-devices-sample");
 
         let pdevices = match instance.enumerate_physical_devices() {
             Ok(pdevices) => pdevices,
             Err(error) => {
                 // we should destroy the instance we have created, before panicking
-                destroy_instance_and_panic(
+                ash_samples::destroy_instance_and_panic(
                     &format!("failed to create pdevices: {:?}", error),
                     instance,
                 );
