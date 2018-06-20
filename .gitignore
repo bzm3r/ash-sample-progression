@@ -10,4 +10,4 @@ tutorial-doc/*.synctex.gz
 tutorial-doc/*.bcf
 tutorial-doc/*.run.xml
 tutorial-doc/_minted-ash-tutorial/
-ash_samples/.idea
+ash-samples/.idea
