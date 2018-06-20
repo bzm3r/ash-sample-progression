@@ -310,8 +310,8 @@ typedef enum VkQueueFlagBits {
          
 	To test whether a particular bit is set (i.e. is $1$), the \ril{subset} \ril{impl} for \ril{ash::types::QueueFlags} can be used, as demonstrated by  \ril{get_queue_family_supported_ops} in "init-device-0.rs". This program prints out queue families supported by the first physical device in the list of physical devices available on the host system.
 		
-\subsection{\texttt{init-device-and-queues.rs}}
-	In "init-device-1", "init-device-0" is iterated upon by by adding functionality to choose a physical device which has a queue family with graphics capability, since the tutorial ultimately aims to display a cube. One an appropriate physical device has been chosen, a \emph{logical device} is created on it, which will be used to create a queue from the graphics family. A broad outline for executing this procedure using the C-ish API is:
+\subsection{\texttt{init-device-and-queue.rs}}
+	"init-device.rs" will now be iterated upon by by adding functionality to choose a physical device which has a queue family with graphics capability, since the tutorial ultimately aims to display a cube. One an appropriate physical device has been chosen, a \emph{logical device} is created on it, which will be used to create a queue from the graphics family. A broad outline for executing this procedure using the C-ish API is:
 		\begin{enumerate}
 			\item fill out a \cil{VkDeviceQueueCreateInfo} "struct" based on the queue family selected for each queue that will be created, and store each such "struct" in an array, perhaps called \cil{pQueueCreateInfos}
 				
@@ -382,9 +382,9 @@ typedef struct VkDeviceCreateInfo {
     	\end{center}
       
 \section{\texttt{init-command-buffer.rs}}
-	Using Vulkan, application records commands in a command buffer, which are then transmitted to underlying drivers Since instructions are given in batches from a buffer, drivers are able to further optimize execution, as they have some fore-knowledge of future instructions.
+	With Vulkan, applications records commands in a command buffer, which is passed on to underlying drivers Since instructions are received in batches stored in buffers, drivers are able to use knowledge of upcoming instructions to optimize execution of the entire set. 
     
-	However, creating and destroying individual command buffers manually can be expensive, so Vulkan utilizes the abstraction of \inquotes{command buffer pools}, which manage the creation and destruction of command buffers using \inquotes{pool allocators}. In addition, pools manage sending large groups of (small) command buffers with increased efficiency. Every command buffer pool is associated with a particular queue family on the physical device, since drivers allocate pools based on the type of queue family.
+	However, naive implementations for creating and destroying individual command buffers can be very inefficient, so Vulkan provides \inquotes{command buffer pools}, which manage the creation and destruction of command buffers using \inquotes{pool allocators}. Furthermore, pools manage sending large groups of (small) command buffers with increased efficiency. Since pools are allocated based on the type of queue family they will pass command buffers to, every command buffer pool is associated with a single queue family available from the physical device.
 	
 	To create a command buffer pool, a \cil{vkCommandPoolCreateInfo} "struct" is submitted to the \cil{vkCreateCommandPool} function:
 	\begin{minted}{c}
