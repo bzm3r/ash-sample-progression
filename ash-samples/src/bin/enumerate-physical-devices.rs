@@ -3,7 +3,7 @@ extern crate ash;
 
 use ash::Entry;
 use ash::Instance;
-use ash::version::{EntryV1_0, InstanceV1_0, V1_0};
+use ash::version::{InstanceV1_0, V1_0};
 
 // please look at ash-tutorial.pdf for further information!
 fn main() {

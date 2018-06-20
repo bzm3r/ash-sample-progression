@@ -14,7 +14,7 @@ use ash::version::{EntryV1_0, InstanceV1_0, V1_0};
 
 fn main() {
     unsafe {
-        let (entry, instance): (Entry<V1_0>, Instance<V1_0>) = init_instance();
+        let (entry, instance): (Entry<V1_0>, Instance<V1_0>) = init_instance("init-device-sample");
 
         let pdevices = instance
             .enumerate_physical_devices()
