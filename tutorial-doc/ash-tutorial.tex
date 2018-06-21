@@ -116,8 +116,29 @@
             
             \item \item what does \texttt{"\textbackslash0"} do in a string? 
 		\end{itemize}
-    
-    
+   
+\section{Motivation}
+
+This tutorial assumes that the reader is somewhat interested in displaying computationally generated images on a physical screen: a task that is evidently easy to state. Attempting to execute this task however, will bear testament to the vast number of interconnected systems, developed over decades, which must be marshalled to create applications using electronic computing devices, of which the display of graphics is a relatively new and one might argue, relatively small part since for majority of the history of computational devices, graphical displays were rudimentary, if not inexistent. 
+
+To display a graphical image on an electronic device, one must:
+    \begin{enumerate}
+        \item have some system (mathematics, \inquotes{geometry}) for describing images without ambiguity that requires human interpolation to decipher (i.e. without words)
+        
+        \item have some system (\inquotes{raster graphics}) for digitally representing image data
+        
+        \item have a computing device capable of \emph{efficiently} converting mathematical descriptions of images into digital representations; these tasks are very computationally intensive, since each point (pixel) of raster image must be specified, and the number of pixels in any interesting picture tend to be very large---this computational difficulty spawned a whole family of computing devices geared specifically towards performing many small calculations in parallel (\inquotes{graphics cards})
+        
+        \item have an electronic device \inquotes{CRT screen, LCD screen} capable of understanding/presenting digital image data: i.e. capable of converting image data into a physical format our eyes can interpret
+    \end{enumerate}
+
+The hardware (physical) software (digital, programmatic) systems required are less standardized than the mathematical systems involved. There is more than one vendor of Graphical Processing Units (GPUs), Central Processing Units (CPUs), screens, operating systems for managing these devices etc. and they are often engaged in economic competition, so standardization has been a slow, but steady process. Vulkan is the result of this process of standardization: it provides specification documents and software-side infrastructure to facilitate software-hardware communication by presenting a standardized interface joining software developers from one side with hardware developers on the other. 
+
+People began to notice that there is no reason why one should \emph{only} perform graphics related computations in parallel on a graphics card, as there are many applications that can take advantage of the highly parallel nature of such physical devices. In fact, as Moore's prediction of exponentially increase processing speeds of electronic processors begins to tangle with engineering/physical limits, people are increasingly putting what were traditionally single processors into groups that work together. 
+
+The marketing for Vulkan API is in many ways, is a product of this trend as it portrays Vulkan as not only a graphics API, but also a general \inquotes{compute} API. While it is true that compared to previous APIs such as OpenGL (highly specialized for graphics), Vulkan is designed with a far more abstract view of the computations it facilitates, the OpenCL API (developed by the same organization behind Vulkan) is \href{https://www.lunarg.com/faqs/vulkan-opencl-general-computing/}{a better choice} for handling general (usually scientific) highly-parallelized and/or heterogeneous system computations. Still, there is something to be said for Vulkan's abstracted organization, as it makes possible \href{https://www.lunarg.com/faqs/vulkan-opencl-interoperability/}{future convergence of OpenCL with Vulkan}.
+
+
 \section{Introduction to Vulkan}
 
 Vulkan provides an interface between software applications and a Vulkan-compatible physical devices. Vulkan compatible physical devices can be:
@@ -127,14 +148,13 @@ Vulkan provides an interface between software applications and a Vulkan-compatib
 		\item special purpose hardware for highly-parallel computing, e.g. a GPU;
 		\item many CPUs configured to share data with each other
 	\end{itemize}
-A physical device is Vulkan compatible if someone has written a \inquotes{driver} meant to organize communication between the physical device and Vulkan's internals. Thus, Vulkan standardizes communication between software and a wide variety of hardware.
+A physical device is Vulkan compatible if somewhere, sometime, effort was put into writing a \inquotes{driver} meant to organize transfer of data between hardware and software as per the Vulkan specification. Thus, Vulkan standardizes communication between software and a wide variety of hardware.
 
 Vulkan commands that form the interface between application and hardware drivers are brought into action by a \inquotes{loader}. Vulkan's specification calls for its core commands and the drivers they communicate with to be highly specialized for software-silicon crosstalk, so extraneous capabilities (such as debugging conveniences) are provided through optional (chosen by the programmer) \inquotes{layers} which are placed between the loader-driver conduit.    
 
-Thus, to begin, a programmer creates an \inquotes{instance} of the loader. Through this loader instance, they search system for physical devices with Vulkan-compatible drivers. They choose specific physical devices to work with, and set which optional features of the physical devices should be used (e.g. use 64-bit floats, or 32-bit floats?). For each physical device, the programmer defines one or more \inquotes{logical devices}: abstractions representing subsets of a physical device's resources. Each logical device is used to create \inquotes{queues}, which are selected from several types of \inquotes{queue families}. Not all physical devices may implement every type of queue family, as different queue families are specialized for transferring particular types/formats of information. Finally, the programmer enables Vulkan API \inquotes{extensions} which provide convenient functions to handle certain tasks they might be interested in (e.g. graphics display).
+Thus, to begin, a programmer creates an \inquotes{instance} of the loader. Through this loader instance, they search system for physical devices with Vulkan-compatible drivers. They choose specific physical devices to work with, and set which optional features of the physical devices should be used (e.g. use 64-bit floats, or 32-bit floats?). For each physical device, the programmer defines one or more \inquotes{logical devices}: abstractions representing subsets of a physical device's resources. Each logical device is used to create \inquotes{queues}, which are selected from several types of \inquotes{queue families}. Not all physical devices may implement every type of queue family, as different queue families are specialized for transferring particular types/formats of information. Finally, the programmer enables Vulkan API \inquotes{extensions} which provide convenient functions to handle specific tasks (e.g. graphics display).
 
 From now on in this document, \inquotes{device} without qualification shall refer to a \inquotes{logical device} while a physical device will only be referred to in full as \inquotes{physical device}.
-
 
 \begin{quotation}
     Vulkan exposes one or more devices, each of which exposes one or more queues which may process work asynchronously to one another. The set of queues supported by a device is partitioned into families. Each family supports one or more types of functionality and may contain multiple queues with similar characteristics. Queues within a single family are considered compatible with one another, and work produced for a family of queues can be executed on any queue within that family. This Specification defines four types of functionality that queues may support: graphics, compute, transfer, and sparse memory management.
@@ -382,9 +402,9 @@ typedef struct VkDeviceCreateInfo {
     	\end{center}
       
 \section{\texttt{init-command-buffer.rs}}
-	With Vulkan, applications records commands in a command buffer, which is passed on to underlying drivers Since instructions are received in batches stored in buffers, drivers are able to use knowledge of upcoming instructions to optimize execution of the entire set. 
+	In the Vulkan model of execution, an application records commands into a buffer, which is passed to physical device drivers Since instructions are received in batches, drivers are able to use knowledge of upcoming instructions to optimize execution of the entire batch. 
     
-	However, naive implementations for creating and destroying individual command buffers can be very inefficient, so Vulkan provides \inquotes{command buffer pools}, which manage the creation and destruction of command buffers using \inquotes{pool allocators}. Furthermore, pools manage sending large groups of (small) command buffers with increased efficiency. Since pools are allocated based on the type of queue family they will pass command buffers to, every command buffer pool is associated with a single queue family available from the physical device.
+	Since aive implementations for creating and destroying individual command buffers can be very inefficient, Vulkan provides \inquotes{command buffer pools}, which manage the creation and destruction of command buffers using \inquotes{pool allocators}. Another source of inefficiency can be the processing of many command buffers, each with a small number of instructions, so pools also provide solutions here. Since pools are allocated based on the type of queue family their commands are intended for, every command buffer pool is associated with a single queue family available to the physical device.
 	
 	To create a command buffer pool, a \cil{vkCommandPoolCreateInfo} "struct" is submitted to the \cil{vkCreateCommandPool} function:
 	\begin{minted}{c}
@@ -424,7 +444,7 @@ VkResult vkCreateCommandPool(
 			\item \cil{pCommandPool}: a pointer to a \cil{vkCommandPool}, which \cil{vkCreateCommandPool} will associate with the newly created pool
 		\end{itemize}
     
-	Once we have a command pool,  we store it in a \cil{VkCommandBufferAllocateInfo} "struct", which is submitted to a call of \cil{vkAllocateCommandBuffers}:
+	Once a command pool is created, it is stored in a \cil{VkCommandBufferAllocateInfo} "struct", which is submitted to a call of \cil{vkAllocateCommandBuffers}:
 		\begin{minted}{c}
 typedef struct VkCommandBufferAllocateInfo {
 	VkStructureType         sType;
@@ -445,9 +465,9 @@ VkResult vkAllocateCommandBuffers(
 			
 			\item \cil{pNext}: standard info "struct" member
 			
-			\item \cil{commandPool}: command pool that we created
+			\item \cil{commandPool}: command pool that was created
 			
-			\item \cil{level}: the "enum" \cil{VkCommandBufferLevel} has values \cil{VK_COMMAND_BUFFER_LEVEL_PRIMARY} and \cil{VK_COMMAND_BUFFER_LEVEL_SECONDARY}, which specify whether this command buffer is primary or secondary. A primary command buffer can be submitted to a queue but cannot be called by another command buffer, while a secondary command buffer cannot be submitted to a queue, but can be called by another command buffer. 
+			\item \cil{level}: the "enum" \cil{VkCommandBufferLevel} has values \cil{VK_COMMAND_BUFFER_LEVEL_PRIMARY} and \cil{VK_COMMAND_BUFFER_LEVEL_SECONDARY}, which specify whether this command buffer is primary or secondary---a primary command buffer can be submitted to a queue, while a secondary command buffer cannot be submitted to a queue, but can be executed by a primary command buffer; primary command buffers cannot be executed by secondary ones
 			
 			\item \cil{commandBufferCount}: how many buffers to make with these settings
 
@@ -458,29 +478,30 @@ VkResult vkAllocateCommandBuffers(
 			\item \cil{VkCommandBuffer}: a pointer to an array of \cil{VkCommandBuffer}s where the newly created command buffers will be stored (so, the array should have length at least \cil{commandBufferCount} set in the \cil{VkCommandBufferAllocateInfo} "struct")
 		\end{itemize}
 	
-	Let's now turn our attention to Rust and \ash, where we'd follow (similar to C-ish) the following steps to create a command pool, and then command buffers associated with that pool:
+	Using Rust, assuming a logical device has been created:
 		\begin{enumerate}
-			\item we store info used to create a command pool in a \ril{vk::CommandPoolCreateInfo} "struct"
+            \item use logical device's \ril{impl} \ril{create_command_pool} for creating a command pool
+            
+			\item store info used to create a command pool in a \ril{vk::CommandPoolCreateInfo} "struct"
 			
-			\item a logical device (with type \ril{Device<V1_0>} in our tutorial so far) has an \ril{impl} \ril{create_command_pool} for creating a command pool
+			\item store info used to allocate command buffers in a \ril{vk::CommandBufferAllocateInfo} "struct"
 			
-			\item we store info used to allocate command buffers in a \ril{vk::CommandBufferAllocateInfo} "struct"
-			
-			\item a logical device (with type \ril{Device<V1_0>} in our tutorial so far) has an \ril{impl} \ril{allocate_command_buffers} for allocating buffers
+			\item use logical device's \ril{impl} \ril{allocate_command_buffers} for allocating buffers
 			
 			\item use command pool as necessary
 			
-			\item destroy command pool with a logical device's (with type \ril{Device<V1_0>} in our tutorial so far) \ril{impl} \ril{destroy_command_pool}
+			\item destroy command pool with logical device's \ril{impl} \ril{destroy_command_pool}
 		\end{enumerate}
-	In "init-command-buffer.rs", you can see how these steps are straightforwardly executed using \ash. However, note that our clean ups are becoming more complicated and have a look at the new function \ril{clean_up}. 
+    
+	These steps are implemented in "init-command-buffer.rs". Note that our clean ups are becoming more complicated, necessitating a new function \ril{clean_up}, which can handle clean up of instances, devices, and pools. 
 	
-	In coming sections, we will record commands to command buffers, but note that recording commands in the buffer does not make the GPU do anything until the command buffer is submitted using a \cil{vkQueueSubmit} call. We have much to do before we will make this call, which will be made in the last part of this tutorial series.
+	In the last sample of this tutorial series, we will record commands to command buffers, and submit them to a physical device using Vulkan-provided \cil{vkQueueSubmit}'s Rust analogue. Between now and then, necessary preparatory steps are undertaken.
 	
 \section{\texttt{init-swap-chain.rs}}
-	In this section, we'll learn how to initialize the \inquotes{swap chain}, sometimes also written as \inquotes{swapchain}. What is a swap chain? Well, Wikipedia says it best\autocite{wiki:swap-chain}:
-		\begin{indenttext}
-			In computer graphics, a swap chain is a series of virtual framebuffers utilized by the graphics card and graphics API [in our case, Vulkan] for frame rate stabilization and several other functions. The swap chain usually exists in graphics memory, but it can exist in system memory as well. The non-utilization of a swap chain may result in stuttering rendering, but its existence and utilization are required by many graphics APIs...In every swap chain there are at least two buffers. The first framebuffer, the screenbuffer, is the buffer that is rendered to the output of the video card. The remaining buffers are known as backbuffers. Each time a new frame is displayed, the first backbuffer in the swap chain takes the place of the screenbuffer, this is called presentation or swapping...(see also Figure \ref{fig:swap-chain-depiction})
-		\end{indenttext}
+	We now consider the problem of getting data from the physical device, for \inquotes{real-time} display by an electronic screen. Swap chains are an abstraction that facilitate the illusion of real-time, as Wikipedia explains\autocite{wiki:swap-chain} (emphasis mine):
+		\begin{quotation}
+			In computer graphics, a swap chain is a series of virtual framebuffers utilized by the graphics card and graphics API for frame rate stabilization and several other functions. The swap chain usually exists in graphics memory, but it can exist in system memory as well. The non-utilization of a swap chain may result in stuttering rendering, but its existence and utilization are required by many graphics APIs...In every swap chain there are at least two buffers. The first framebuffer, the screenbuffer, is the buffer that is rendered to the output of the video card. The remaining buffers are known as backbuffers. Each time a new frame is displayed, the first backbuffer in the swap chain takes the place of the screenbuffer, this is called \textbf{presentation} or \textbf{swapping}...(see also Figure \ref{fig:swap-chain-depiction})
+		\end{quotation}
 	
 		\begin{figure}
 			\centering
@@ -489,11 +510,11 @@ VkResult vkAllocateCommandBuffers(
 			\label{fig:swap-chain-depiction}
 		\end{figure}
 
-	So, the output of the graphics device is buffered through the use of swap chains, in order to give the end-user the illusion that rendering is smooth, by making the frames appear one after the other at a constant, rather than variable rate.
+	In other words, the output of the graphics device is buffered through the use of swap chains, in order to give the end-user the illusion that rendering is smooth, by making the frames appear one after the other at a constant, rather than variable rate.
 	
-	The core Vulkan API is platform (e.g. Windows, GNU/Linux, MacOS) and physical device (see Introduction) agnostic. In order to expose capabilities provided by a particular platform or physical device, the core API has to be extended by special extensions which take into account details relevant to the particular platform or physical device. Many of these extensions are provided and maintained by the Khronos Group itself, and we will now augment the core API with an extension that will allow it to deal with physical devices' specific implementations of swap chains. 
+	Implementation of swap chains can depend heavily upon the architecture of a physical device. However, recall that the core Vulkan API is platform and physical device agnostic, so it does not deal with device specific details related to swap chains. To expose capabilities provided by a particular platform or physical device, the core API has to be extended by special extensions, many of which are provided and maintained by the Khronos Group itself. It will be necessary to augment the core API with an extension that will allow it to deal with physical devices' specific implementations of swap chains. 
 	
-	So, how does one enable the relevant extension? Recall the info "struct" we had to fill out in order to create a logical device:
+    Recall the info "struct" we had to fill out in order to create a logical device:
 \begin{minted}{c}
 typedef struct VkDeviceCreateInfo {
 	VkStructureType                    sType;
@@ -508,13 +529,12 @@ typedef struct VkDeviceCreateInfo {
 	const VkPhysicalDeviceFeatures*    pEnabledFeatures;
 } VkDeviceCreateInfo;
 \end{minted}
-	When we last looked at this "struct", we ignored \cil{enabledExtensionCount} and \cil{ppEnabledExtensionNames}, but in this section, we'll fill these out. For creating and managing swap chains, we are interested in the extension "VK\_KHR\_swapchain", so we'd pass a list containing that string, and the count of that list. 
-	
-	With \ash, we'd do this as follows:
+
+	Previously, \cil{enabledExtensionCount} and \cil{ppEnabledExtensionNames} were ignored, but now we will specify extension \texttt{"VK\_KHR\_swapchain"} as enabled. The following steps are necessary, using \ash:
 		\begin{enumerate}
-			\item \ril{use ash::extensions::Swapchain}: loads the module which contains swap chain extension related stuff. In particular, the \ril{ash::extensions::{DebugReport, Surface, Swapchain}} "struct" has function pointer members (i.e. members which are basically functions), \ril{impl}s that will be of great use to us
+			\item \ril{use ash::extensions::Swapchain} loads the module which contains swap chain extension related stuff
 				
-			\item Create an array with the right string, by using the \ril{name} static \ril{impl} of \ril{Swapchain} (track down the source for \ril{Swapchain::name} as an exercise): 
+			\item create an array with the string \texttt{"VK\_KHR\_swapchain"} by using the \ril{name} static \ril{impl} of \ril{Swapchain} (track down the source for \ril{ash::extensions::Swapchain::name} as an exercise): 
 \begin{minted}{rust}
 let device_extension_names_pointers = [Swapchain::name().as_ptr()];
 \end{minted}
@@ -522,9 +542,9 @@ let device_extension_names_pointers = [Swapchain::name().as_ptr()];
 			\item set the \ril{enabled_extension_count} and \ril{pp_enabled_extension_names} members of the \ril{vk::DeviceCreateInfo} "struct" we fill out using \ril{device_extension_names_pointers.len() as u32} and \ril{device_extension_names_pointers} respectively
 		\end{enumerate}
 	
-	Thus, when we create \ril{device} in "init-swap-chain.rs", we'll have enabled the swap chain extension. 
+	Now, the \ril{device} created in "init-swap-chain.rs" will have the swapchain extension enabled. 
 	
-	In C-ish our next step will be to set up the \cil{VkSwapchainCreateInfoKHR} info "struct":
+	In C-ish, one would proceed further by setting up "struct" \cil{VkSwapchainCreateInfoKHR}:
 \begin{minted}{c}
 typedef struct VkSwapchainCreateInfoKHR {
 	VkStructureType                  sType;
@@ -581,11 +601,11 @@ typedef struct VkSwapchainCreateInfoKHR {
 		\item 
 	\end{itemize}
 	
-	As you can see, there's a lot of infrastructure involved in taking image data from a physical device, and then displaying it to a user. The rest of this section is going to go over how to fill out this structure.
+	It is apparent that there is a deep infrastructure layer involved in taking image data from a physical device and displaying it. The rest of this section will describe how to fill out the above info "struct".
 	
-	It is the \inquotes{windowing system} (e.g. X Window System, MS Windows, Wayland) which is responsible for displaying the data stored in a swap chain, by providing us with a \inquotes{surface} abstraction onto which data is drawn. Note that the windowing system is separate from the core Vulkan API, but there are Khronos Group maintained extensions to Vulkana (different ones for different windowing systems) which allow it to integrate with the windowing system (Window System Integration, or WSI). The relevant extension in this case will be specified in the info "struct" used to create the instance.
+	The \inquotes{windowing system} (e.g. X Window System, MS Windows, Wayland) is responsible for organizing the display of data emitted by a phsyical device: a process termed \inquotes{Window System Integration}, or WSI. To this end, windowing systems provide a \inquotes{surface} abstraction onto which output data is \inquotes{drawn}. There are extensions available which allow Vulkan to integrate with different windowing systems. The relevant extension in this case will be specified in the info "struct" used to create the instance (not the logical device!).
 	
-	Getting the name of the relevant extension using \ash needs a bit more care this time, because the extension to be used depends upon which platform our application is on. First, we should load the relevant extension modules: \ril{use ash::extensions::{Surface, Win32Surface, XlibSurface}}, then we write functions that will \href{https://doc.rust-lang.org/book/first-edition/conditional-compilation.html}{conditionally compile} based on which platform we are on:
+	We load the relevant extension modules: \ril{use ash::extensions::{Surface, Win32Surface, XlibSurface}}, and \href{https://doc.rust-lang.org/book/first-edition/conditional-compilation.html}{conditionally compile} functions by taking into account the host platform:
 \begin{minted}{rust}
 #[cfg(all(unix, not(target_os = "android")))]
 fn extension_names() -> Vec<*const i8> {
@@ -604,11 +624,10 @@ fn extension_names() -> Vec<*const i8> {
 }
 \end{minted}
 
-	Now we have surface related extensions loaded, but we still can't create a surface, until there is a window which can be associated with the surface. In C-ish, there are various windowing libraries, but in Rust, we'll use \ril{extern crate winit}. 
+	A surface needs a \inquotes{window} associated with it. In Rust as in C-ish, there are various windowing libraries, but this tutorial uses \ril{extern crate winit}. This document will not discuss in depth the internals of a window system, which depend heavily upon the particular platform the application is running on. These details are explained in documentation for the \ril{winit} crate, amongst other sources.
 	
-	\subsection{Creating a window}
-		The following code in "init-swap-chain.rs" is relevant to creating a window:
-			\begin{minted}{rust}
+	The following code in "init-swap-chain.rs" creates a window:
+		\begin{minted}{rust}
 let events_loop = winit::EventsLoop::new();
 
 let window = winit::WindowBuilder::new()
@@ -616,15 +635,13 @@ let window = winit::WindowBuilder::new()
 .with_dimensions(window_width, window_height)
 .build(&events_loop)
 .unwrap();
-			\end{minted}
+		\end{minted}
 			
-		Let's understand what is going on here. First of all, we create an \href{https://en.wikipedia.org/wiki/Event_loop#Windows_applications}{event loop}. An event loop essentially handles messages sent between the user interface (the window), and our application. For instance, if the user presses a key, the event loop will notify our application of this, and allow it to choose what to do. It is worth taking a look at \href{https://docs.rs/winit/0.10.0/winit/struct.EventsLoop.html}{the documentation} for \ril{winit::EventsLoop}. Once we have the events loop set up, we build a window, using several pretty self-explanatory calls which provide the title, definition and so on. This tutorial will not spend much time discussing the internals of the window system, which depend heavily upon the particular platform the application is running on. Now that we have a \ril{window}, we can create a surface. Again, these functions are going to be platform dependent: have a look at them (\ril{create_surface}) within the source code for this example. 
+	First, an \href{https://en.wikipedia.org/wiki/Event_loop#Windows_applications}{event loop} is created. The event loop handles messages sent between the user interface (the window), and our application (e.g. user input). Further details are presented in \href{https://docs.rs/winit/0.10.0/winit/struct.EventsLoop.html}{the documentation} for \ril{winit::EventsLoop}. Next, a window is created using self-explantory calls setting the title, dimensions and event loop. 
         
-        Find a queue that is capable of presentation.
+    Given the \ril{window} from a windowing system, we create an associated surface using a platform dependent conditionally compiled function \ril{create_surface}, which is defined within "init-swap-chain.rs". 
         
-        
-    
-    The gist of what is happening in these functions is that 
+    In the Wikipedia excerpt explaining swap chains at the start of this chapter, it was noted that processing of data emission from a physical device may be called \inquotes{swapping} or \inquotes{presenting}. So, given a surface, we look for graphics capable queues that able to support \inquotes{presentation} (i.e. communication of data to) to the surface, also known as \inquotes{supporting a surface}.  
         
 \section{Thanks}
 	The information in this tutorial was derived from multiple sources (\inquotes{"<search engine> is your best friend!"}), but some stand prominent amongst them. Grateful thanks is owed to:

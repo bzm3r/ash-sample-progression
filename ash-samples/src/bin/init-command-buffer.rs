@@ -1,25 +1,30 @@
-#![feature(use_extern_macros)]
 extern crate ash;
+extern crate ash_samples;
 
-use std::ffi::CString;
 use ash::vk;
-use std::ptr;
-use std::default::Default;
 use ash::Entry;
 use ash::Instance;
 use ash::Device;
-use ash::version::{DeviceV1_0, EntryV1_0, InstanceV1_0, V1_0};
+use ash::version::{DeviceV1_0, InstanceV1_0, V1_0};
+use std::ptr;
 
 // code is a Rust version of: https://github.com/LunarG/VulkanSamples/blob/master/API-Samples/02-enumerate_devices/02-enumerate_devices.cpp
 // please look at ash-tutorial.pdf for further information!
 
 fn main() {
     unsafe {
-        let instance: Instance<V1_0> = init_instance();
+        let (_entry, instance): (Entry<V1_0>, Instance<V1_0>) = ash_samples::init_instance("init-command-buffer-sample");
 
-        let pdevices = instance
-            .enumerate_physical_devices()
-            .expect("Physical device error");
+        let pdevices = match instance.enumerate_physical_devices() {
+            Ok(pdevices) => pdevices,
+            Err(error) => {
+                // we should destroy the instance we have created, before panicking
+                ash_samples::destroy_instance_and_panic(
+                    &format!("failed to get list of pdevices: {:?}", error),
+                    instance,
+                );
+            }
+        };
 
         println!("{} pdevices found.", pdevices.len());
         if pdevices.len() == 0 {
@@ -27,7 +32,7 @@ fn main() {
         }
 
         let (pdevice, queue_family_index): (vk::types::PhysicalDevice, usize) =
-            match find_relevant_pdevice_and_queue_family(
+            match ash_samples::find_relevant_pdevice_and_queue_family(
                 &instance,
                 pdevices,
                 vec![vk::QUEUE_GRAPHICS_BIT],
@@ -54,7 +59,7 @@ fn main() {
              ===========\n",
             queue_family_index,
             qfp_info.queue_count as u32,
-            get_queue_family_supported_ops(qfp_info.queue_flags)
+            ash_samples::get_queue_family_supported_ops(qfp_info.queue_flags)
         );
 
         let priorities: [f32; 1] = [1.0];
@@ -146,45 +151,6 @@ fn main() {
     }
 }
 
-fn init_instance() -> Instance<V1_0> {
-    unsafe {
-        let app_name = CString::new("vulkansamples_instance").unwrap();
-        let app_name_raw = app_name.as_ptr();
-
-        println!("Creating ApplicationInfo...");
-        let appinfo = vk::ApplicationInfo {
-            p_application_name: app_name_raw,
-            s_type: vk::StructureType::ApplicationInfo,
-            p_next: ptr::null(),
-            application_version: 0,
-            p_engine_name: app_name_raw,
-            engine_version: 0,
-            api_version: ash::vk_make_version!(1, 0, 36),
-        };
-
-        println!("Creating InstanceCreateInfo...");
-        let create_info = vk::InstanceCreateInfo {
-            s_type: vk::StructureType::InstanceCreateInfo,
-            p_next: ptr::null(),
-            flags: Default::default(),
-            p_application_info: &appinfo,
-            pp_enabled_layer_names: ptr::null(),
-            enabled_layer_count: 0 as u32,
-            pp_enabled_extension_names: ptr::null(),
-            enabled_extension_count: 0 as u32,
-        };
-
-        println!("Creating instance...");
-        let entry = Entry::new().unwrap();
-        let instance: Instance<V1_0> = entry
-            .create_instance(&create_info, None)
-            .expect("Instance creation error");
-        // https://docs.rs/ash/0.20.2/src/ash/entry.rs.html#51-54
-
-        instance
-    }
-}
-
 unsafe fn clean_up_and_panic(
     message: &str,
     instance: Instance<V1_0>,
@@ -222,50 +188,3 @@ unsafe fn clean_up(
     println!("Clean up complete.");
 }
 
-fn get_queue_family_supported_ops(queue_flags: vk::types::QueueFlags) -> String {
-    let possible_ops: [(&str, vk::types::QueueFlags); 4] = [
-        ("GRAPHICS", vk::QUEUE_GRAPHICS_BIT),
-        ("COMPUTE", vk::QUEUE_COMPUTE_BIT),
-        ("TRANSFER", vk::QUEUE_TRANSFER_BIT),
-        ("SPARSE", vk::QUEUE_SPARSE_BINDING_BIT),
-    ];
-    possible_ops
-        .iter()
-        .filter_map(|&(op, bit)| {
-            if queue_flags.subset(bit) == true {
-                Some(op)
-            } else {
-                None
-            }
-        })
-        .collect::<Vec<&str>>()
-        .join(", ")
-}
-
-fn find_relevant_pdevice_and_queue_family(
-    instance: &Instance<V1_0>,
-    pdevices: Vec<vk::types::PhysicalDevice>,
-    required_capabilities: Vec<vk::types::QueueFlags>,
-) -> Option<(vk::types::PhysicalDevice, usize)> {
-    pdevices
-        .iter()
-        .map(|pdevice| {
-            instance
-                .get_physical_device_queue_family_properties(*pdevice)
-                .iter()
-                .enumerate()
-                .filter_map(|(index, qfp)| {
-                    let has_required_capabilities: bool = required_capabilities
-                        .iter()
-                        .all(|&req_bit| qfp.queue_flags.subset(req_bit));
-
-                    match has_required_capabilities {
-                        true => Some((*pdevice, index)),
-                        false => None,
-                    }
-                })
-                .nth(0)
-        })
-        .filter_map(|r| r)
-        .nth(0)
-}

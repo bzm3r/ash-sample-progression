@@ -10,7 +10,7 @@ use ash::Entry;
 use ash::Instance;
 use ash::Device;
 use ash::version::{DeviceV1_0, EntryV1_0, InstanceV1_0, V1_0};
-use ash::extensions::{Swapchain, Surface, Win32Surface, XlibSurface};
+use ash::extensions::{Swapchain, Surface, Win32Surface, XlibSurface, DebugReport};
 
 // please look at ash-tutorial.pdf for further information!
 
@@ -26,7 +26,7 @@ fn main() {
             .build(&events_loop)
             .unwrap();
 
-        let (entry, instance): (Entry<V1_0>, Instance<V1_0>) = init_instance();
+        let (entry, instance): (Entry<V1_0>, Instance<V1_0>) = ash_samples::init_instance("init-swap-chain-sample");
         let pdevices = match instance.enumerate_physical_devices() {
             Ok(pdevices) => pdevices,
             Err(error) => clean_up_and_panic(format!("Physical device error: {:?}", error),
@@ -161,148 +161,22 @@ fn main() {
     }
 }
 
-
-fn init_instance() -> (Entry<V1_0>, Instance<V1_0>) {
-    unsafe {
-        let app_name = CString::new("vulkansamples_instance").unwrap();
-        let app_name_raw = app_name.as_ptr();
-
-        println!("Creating ApplicationInfo...");
-        let appinfo = vk::ApplicationInfo {
-            p_application_name: app_name_raw,
-            s_type: vk::StructureType::ApplicationInfo,
-            p_next: ptr::null(),
-            application_version: 0,
-            p_engine_name: app_name_raw,
-            engine_version: 0,
-            api_version: ash::vk_make_version!(1, 0, 36),
-        };
-
-        let pp_extension_names = extension_names();
-
-        println!("Creating InstanceCreateInfo...");
-        let create_info = vk::InstanceCreateInfo {
-            s_type: vk::StructureType::InstanceCreateInfo,
-            p_next: ptr::null(),
-            flags: Default::default(),
-            p_application_info: &appinfo,
-            pp_enabled_layer_names: ptr::null(),
-            enabled_layer_count: 0 as u32,
-            pp_enabled_extension_names: pp_extension_names,
-            enabled_extension_count: pp_extension_names.len() as u32,
-        };
-
-        println!("Creating instance...");
-        let entry = Entry::new().unwrap();
-        let instance: Instance<V1_0> = entry.create_instance(&create_info, None).expect(
-            "Instance creation error",
-        );
-        // https://docs.rs/ash/0.20.2/src/ash/entry.rs.html#51-54
-
-        (entry, instance)
-    }
-}
-
-unsafe fn clean_up_and_panic(
-    message: &str,
-    instance: Instance<V1_0>,
-    some_device: Option<Device<V1_0>>,
-    some_pool: Option<vk::CommandPool>,
-) -> ! {
-
-    clean_up(instance, some_device, some_pool);
-    panic!("panic: {}", message);
-}
-
-unsafe fn clean_up(
-    instance: Instance<V1_0>,
-    some_device: Option<Device<V1_0>>,
-    some_pool: Option<vk::CommandPool>,
-) {
-    match some_device {
-        Some(device) => {
-            match some_pool {
-                Some(pool) => {
-                    println!("Destroying pool...");
-                    device.destroy_command_pool(pool, None);
-                }
-                None => {}
-            };
-
-            println!("Destroying device...");
-            device.destroy_device(None);
-        }
-        None => {}
-    };
-
-    println!("Destroying instance...");
-    instance.destroy_instance(None);
-
-    println!("Clean up complete.");
-}
-
-fn get_queue_family_supported_ops(queue_flags: vk::types::QueueFlags) -> String {
-    let possible_ops: [(&str, vk::types::QueueFlags); 4] = [
-        ("GRAPHICS", vk::QUEUE_GRAPHICS_BIT),
-        ("COMPUTE", vk::QUEUE_COMPUTE_BIT),
-        ("TRANSFER", vk::QUEUE_TRANSFER_BIT),
-        ("SPARSE", vk::QUEUE_SPARSE_BINDING_BIT),
-    ];
-    possible_ops
-        .iter()
-        .filter_map(|&(op, bit)| if queue_flags.subset(bit) == true {
-            Some(op)
-        } else {
-            None
-        })
-        .collect::<Vec<&str>>()
-        .join(", ")
-}
-
-fn find_relevant_pdevice_and_queue_family(
-    instance: &Instance<V1_0>,
-    pdevices: Vec<vk::types::PhysicalDevice>,
-    required_capabilities: Vec<vk::types::QueueFlags>,
-) -> Option<(vk::types::PhysicalDevice, usize)> {
-
-    pdevices
-        .iter()
-        .map(|pdevice| {
-            instance
-                .get_physical_device_queue_family_properties(*pdevice)
-                .iter()
-                .enumerate()
-                .filter_map(|(index, qfp)| {
-                    let has_required_capabilities: bool =
-                        required_capabilities.iter().all(|&req_bit| {
-                            qfp.queue_flags.subset(req_bit)
-                        });
-
-                    match has_required_capabilities {
-                        true => Some((*pdevice, index)),
-                        false => None,
-                    }
-                })
-                .nth(0)
-        })
-        .filter_map(|r| r)
-        .nth(0)
+#[cfg(all(windows))]
+fn get_extension_names() -> Vec<*const i8> {
+    vec![
+        Surface::name().as_ptr(),
+        Win32Surface::name().as_ptr(),
+        DebugReport::name().as_ptr(),
+    ]
 }
 
 #[cfg(all(unix, not(target_os = "android")))]
-fn extension_names() -> Vec<*const i8> {
-	vec![
-		Surface::name().as_ptr(),
-		XlibSurface::name().as_ptr(),
-	]
-}
-
-#[cfg(all(windows))]
-fn extension_names() -> Vec<*const i8> {
-	vec![
-		Surface::name().as_ptr(),
-		Win32Surface::name().as_ptr(),
-	]
+fn get_extension_names() -> Vec<*const i8> {
+    vec![
+        Surface::name().as_ptr(),
+        XlibSurface::name().as_ptr(),
+        DebugReport::name().as_ptr(),
+    ]
 }
 
 #[cfg(all(unix, not(target_os = "android")))]
@@ -310,8 +184,6 @@ unsafe fn create_surface<E: EntryV1_0, I: InstanceV1_0>(
     entry: &E,
     instance: &I,
     window: &winit::Window,
-    some_device: Option<Device<V1_0>>,
-    some_pool: Option<vk::CommandPool>
 ) -> Result<vk::SurfaceKHR, vk::Result> {
     use winit::os::unix::WindowExt;
     let x11_display = window.get_xlib_display().unwrap();
@@ -323,12 +195,8 @@ unsafe fn create_surface<E: EntryV1_0, I: InstanceV1_0>(
         window: x11_window as vk::Window,
         dpy: x11_display as *mut vk::Display,
     };
-    let xlib_surface_loader = match XlibSurface::new(entry, instance) {
-        Ok(result) => result,
-        Err(error) => {
-            clean_up_and_panic(format!("Could not create surface loader.", instance, some_device, some_pool);    
-        },
-    };
+    let xlib_surface_loader =
+        XlibSurface::new(entry, instance).expect("Unable to load xlib surface");
     xlib_surface_loader.create_xlib_surface_khr(&x11_create_info, None)
 }
 
@@ -337,12 +205,13 @@ unsafe fn create_surface<E: EntryV1_0, I: InstanceV1_0>(
     entry: &E,
     instance: &I,
     window: &winit::Window,
-    some_device: Option<Device<V1_0>>,
-    some_pool: Option<vk::CommandPool>
 ) -> Result<vk::SurfaceKHR, vk::Result> {
+    use winapi::shared::windef::HWND;
+    use winapi::um::winuser::GetWindow;
     use winit::os::windows::WindowExt;
-    let hwnd = window.get_hwnd() as *mut winapi::windef::HWND__;
-    let hinstance = unsafe { user32::GetWindow(hwnd, 0) as *const vk::c_void };
+
+    let hwnd = window.get_hwnd() as HWND;
+    let hinstance = GetWindow(hwnd, 0) as *const vk::c_void;
     let win32_create_info = vk::Win32SurfaceCreateInfoKHR {
         s_type: vk::StructureType::Win32SurfaceCreateInfoKhr,
         p_next: ptr::null(),
@@ -350,11 +219,7 @@ unsafe fn create_surface<E: EntryV1_0, I: InstanceV1_0>(
         hinstance: hinstance,
         hwnd: hwnd as *const vk::c_void,
     };
-    let win32_surface_loader = match Win32Surface::new(entry, instance) {
-        Ok(result) => result,
-        Err(error) => {
-            clean_up_and_panic(format!("Could not create surface loader."), instance, some_device, some_pool);
-        }
-    };
+    let win32_surface_loader =
+        Win32Surface::new(entry, instance).expect("Unable to load win32 surface");
     win32_surface_loader.create_win32_surface_khr(&win32_create_info, None)
 }
