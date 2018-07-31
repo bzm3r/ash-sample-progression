@@ -119,7 +119,7 @@
    
 \section{Motivation}
 
-This tutorial assumes that the reader is somewhat interested in displaying computationally generated images on a physical screen: a task that is evidently easy to state. Attempting to execute this task however, will bear testament to the vast number of interconnected systems, developed over decades, which must be marshalled to create applications using electronic computing devices, of which the display of graphics is a relatively new and one might argue, relatively small part since for majority of the history of computational devices, graphical displays were rudimentary, if not inexistent. 
+This tutorial assumes that the reader is somewhat interested in displaying computationally generated images on a physical screen: a task that is evidently easy to state. Attempting to execute this task however, will bear testament to the vast number of interconnected systems (developed over decades) which must be marshalled to create applications using electronic computing devices. 
 
 To display a graphical image on an electronic device, one must:
     \begin{enumerate}
@@ -502,7 +502,7 @@ VkResult vkAllocateCommandBuffers(
 
     The creation (\inquotes{rendering}) of 3D images using a computer can be broadly separated into categories:
         \begin{enumerate}
-            \item ahead-of-time rendering: these rendering processes are well suited towards creating 3D images which require time-intensive computations (e.g. for lighting, see: https://en.wikipedia.org/wiki/Ray_tracing_(graphics)) to render highly realistic scenes, detailed animations, or other advanced effects; used for movies, game cut scenes, 3D art, etc.
+            \item ahead-of-time rendering: these rendering processes are well suited towards creating 3D images which require time-intensive computations (e.g. for lighting, see: \href{https://en.wikipedia.org/wiki/Ray_tracing_(graphics)}{Wikipedia article on Ray Tracing}) to render highly realistic scenes, detailed animations, or other advanced effects; used for movies, game cut scenes, 3D art, etc.
             
             \item on-demand rendering: these rendering processes are well suited towards creating 3D images for interactive applications, such as games or user interfaces, which require something like at least 25 frames per second to produce the illusion of smooth animation; clever techniques are used to minimize rendering cost (for example, reflections on glossy surfaces, but instead the scene from the perspective of the surface would be painted on as an approximation), at the cost of losing realistic detail, or other advanced features
         \end{enumerate}
@@ -512,14 +512,14 @@ VkResult vkAllocateCommandBuffers(
     
     \begin{figure}
         \centering
-        \includegraphics[width=0.7\linewidth]{Graphics_pipeline_2_en.svg}
+        \includegraphics[width=0.7\linewidth]{gfx-pipeline-simple}
         \caption{A diagram of a graphics pipeline showing only its most fundamental components. By \href{https://commons.wikimedia.org/wiki/File:Graphics_pipeline_2_en.svg}{PaterMcFly / Vierge Marie}.}
         \label{fig:graphicspipeline2en}
     \end{figure}
     
     \begin{figure}
         \centering
-        \includegraphics[width=0.7\linewidth]{vulkan-graphics-pipeline}
+        \includegraphics[width=0.7\linewidth]{vulkan-gfx-pipeline}
         \caption{A Vulkan graphics pipeline, showing all the different components that could be utilized. From the Vulkan specification.}
         \label{fig:vulkan-graphics-pipeline}
     \end{figure}
@@ -640,7 +640,7 @@ VkResult vkGetPhysicalDeviceSurfaceSupportKHR(
         
         \item \cil{pSupported}: a pointer to "bool32" sized memory; "vkGetPhysicalDeviceSurfaceSupportKHR" will set its value depending on whether the queue family supports presentation to the surface (True for supported, False for not supported)
     \end{itemize}
-    In Rust-land, Ash's wrapper around the \ril{Surface} extension allows us to call the function `get_physical_device_surface_support_khr` through an instance of the surface extension loader.
+    In Rust-land, Ash's wrapper around the \ril{Surface} extension allows us to call the function \cil{get_physical_device_surface_support_khr} through an instance of the surface extension loader.
     
     Having determined which physical device is of interest, and which queue families on it are relevant, we can now create logical device and set up queues on it, and then we can set up command buffers and pools managing those queues. 
     
@@ -878,6 +878,8 @@ typedef enum VkPresentModeKHR {
         
         \item \cil{oldSwapchain}: \cil{VK_NULL_HANDLE} (i.e. no old swapchain), or the existing non-retired swapchain associated with surface; providing the old swapchain will allow the application to present any images acquired from it, and will also help with resource re-use
     \end{itemize}
+
+    "init-swapchain.rs" shows how one would fill out the swapchain create info structure, and then create a swapchain, in a step-by-step fashion which should have no surprises. We finish this section by acquiring \inquotes{views} of presentable images from the swapchain we created.
     
 \section{Thanks}
 	The information in this tutorial was derived from multiple sources (\inquotes{"<search engine> is your best friend!"}), but some stand prominent amongst them. Grateful thanks is owed to:
