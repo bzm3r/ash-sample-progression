@@ -5,3 +5,5 @@ authors = ["Brian Merchant <bhmerchant@gmail.com>"]
 
 [dependencies]
 ash = "0.24.3"
+winit = "0.16.2"
+winapi = "0.3.5"

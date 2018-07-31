@@ -13,7 +13,8 @@ use std::ptr;
 
 fn main() {
     unsafe {
-        let (_entry, instance): (Entry<V1_0>, Instance<V1_0>) = ash_samples::init_instance("init-command-buffer-sample");
+        let (_entry, instance): (Entry<V1_0>, Instance<V1_0>) =
+            ash_samples::init_instance_without_extensions("init-command-buffer-sample");
 
         let pdevices = match instance.enumerate_physical_devices() {
             Ok(pdevices) => pdevices,
@@ -28,7 +29,7 @@ fn main() {
 
         println!("{} pdevices found.", pdevices.len());
         if pdevices.len() == 0 {
-            clean_up_and_panic("No physical devices found!", instance, None, None);
+            clean_up_and_panic("No physical devices found!", instance, None, Vec::<vk::types::CommandPool>::new());
         }
 
         let (pdevice, queue_family_index): (vk::types::PhysicalDevice, usize) =
@@ -43,7 +44,7 @@ fn main() {
                         "Could not find a capable physical device!",
                         instance,
                         None,
-                        None,
+                        Vec::<vk::types::CommandPool>::new(),
                     );
                 }
             };
@@ -96,7 +97,7 @@ fn main() {
                     &format!("failed to create logical device: {:?}", error),
                     instance,
                     None,
-                    None,
+                    Vec::<vk::types::CommandPool>::new(),
                 );
             }
         };
@@ -118,7 +119,7 @@ fn main() {
                     &format!("failed to create command pool: {:?}", error),
                     instance,
                     Some(device),
-                    None,
+                    Vec::<vk::types::CommandPool>::new(),
                 );
             }
         };
@@ -141,44 +142,39 @@ fn main() {
                     &format!("failed to allocate command buffer: {:?}", error),
                     instance,
                     Some(device),
-                    Some(pool),
+                    vec![pool],
                 );
             }
         };
 
         println!("Cleaning up...");
-        clean_up(instance, Some(device), Some(pool));
+        clean_up(instance, Some(device), vec![pool]);
     }
 }
 
 unsafe fn clean_up_and_panic(
     message: &str,
     instance: Instance<V1_0>,
-    some_device: Option<Device<V1_0>>,
-    some_pool: Option<vk::CommandPool>,
+    some_ldevice: Option<Device<V1_0>>,
+    pools: Vec<vk::types::CommandPool>,
 ) -> ! {
-    clean_up(instance, some_device, some_pool);
+    clean_up(instance, some_ldevice, pools);
     panic!("panic: {}", message);
 }
 
 unsafe fn clean_up(
     instance: Instance<V1_0>,
-    some_device: Option<Device<V1_0>>,
-    some_pool: Option<vk::CommandPool>,
-) {
-    match some_device {
-        Some(device) => {
-            match some_pool {
-                Some(pool) => {
-                    println!("Destroying pool...");
-                    device.destroy_command_pool(pool, None);
-                }
-                None => {}
-            };
+    some_ldevice: Option<Device<V1_0>>,
+    pools: Vec<vk::CommandPool>) {
+    match some_ldevice {
+        Some(ldevice) => {
+            for pool in pools {
+                ldevice.destroy_command_pool(pool, None);
+            }
 
-            println!("Destroying device...");
-            device.destroy_device(None);
-        }
+            println!("Destroying ldevice...");
+            ldevice.destroy_device(None);
+        },
         None => {}
     };
 

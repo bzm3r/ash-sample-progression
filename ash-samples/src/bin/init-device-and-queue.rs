@@ -13,7 +13,7 @@ use std::ptr;
 
 fn main() {
     unsafe {
-        let (_entry, instance): (Entry<V1_0>, Instance<V1_0>) = ash_samples::init_instance_without_extensions("init-device-and-queues-sample");
+        let (_entry, instance): (Entry<V1_0>, Instance<V1_0>) = ash_samples::init_instance_without_extensions("init-ldevice-and-queues-sample");
 
         let pdevices = match instance.enumerate_physical_devices() {
             Ok(pdevices) => pdevices,
@@ -40,7 +40,7 @@ fn main() {
                 Some(result) => result,
                 None => {
                     ash_samples::destroy_instance_and_panic(
-                        "Could not find a capable physical device!",
+                        "Could not find a capable physical ldevice!",
                         instance,
                     );
                 }
@@ -84,22 +84,22 @@ fn main() {
             p_enabled_features: ptr::null(),
         };
 
-        let device: Device<V1_0> = match instance.create_device(pdevice, &device_create_info, None)
+        let ldevice: Device<V1_0> = match instance.create_device(pdevice, &device_create_info, None)
         {
             Ok(device) => {
-                println!("Successfully created logical device.");
+                println!("Successfully created logical ldevice.");
                 device
             }
             Err(error) => {
                 ash_samples::destroy_instance_and_panic(
-                    &format!("failed to create logical device: {:?}", error),
+                    &format!("failed to create logical ldevice: {:?}", error),
                     instance,
                 );
             }
         };
 
-        println!("Destroying device...");
-        device.destroy_device(None);
+        println!("Destroying ldevice...");
+        ldevice.destroy_device(None);
 
         println!("Destroying instance...");
         instance.destroy_instance(None);

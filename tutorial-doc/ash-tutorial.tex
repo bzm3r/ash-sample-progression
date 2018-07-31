@@ -401,7 +401,7 @@ typedef struct VkDeviceCreateInfo {
     		"cargo run --bin init-device-and-queue"
     	\end{center}
       
-\section{\texttt{init-command-buffer.rs}}
+\section{3: \texttt{init-command-buffer.rs}}
 	In the Vulkan model of execution, an application records commands into a buffer, which is passed to physical device drivers Since instructions are received in batches, drivers are able to use knowledge of upcoming instructions to optimize execution of the entire batch. 
     
 	Since aive implementations for creating and destroying individual command buffers can be very inefficient, Vulkan provides \inquotes{command buffer pools}, which manage the creation and destruction of command buffers using \inquotes{pool allocators}. Another source of inefficiency can be the processing of many command buffers, each with a small number of instructions, so pools also provide solutions here. Since pools are allocated based on the type of queue family their commands are intended for, every command buffer pool is associated with a single queue family available to the physical device.
@@ -496,24 +496,88 @@ VkResult vkAllocateCommandBuffers(
 	These steps are implemented in "init-command-buffer.rs". Note that our clean ups are becoming more complicated, necessitating a new function \ril{clean_up}, which can handle clean up of instances, devices, and pools. 
 	
 	In the last sample of this tutorial series, we will record commands to command buffers, and submit them to a physical device using Vulkan-provided \cil{vkQueueSubmit}'s Rust analogue. Between now and then, necessary preparatory steps are undertaken.
-	
-\section{\texttt{init-swap-chain.rs}}
-	We now consider the problem of getting data from the physical device, for \inquotes{real-time} display by an electronic screen. Swap chains are an abstraction that facilitate the illusion of real-time, as Wikipedia explains\autocite{wiki:swap-chain} (emphasis mine):
-		\begin{quotation}
-			In computer graphics, a swap chain is a series of virtual framebuffers utilized by the graphics card and graphics API for frame rate stabilization and several other functions. The swap chain usually exists in graphics memory, but it can exist in system memory as well. The non-utilization of a swap chain may result in stuttering rendering, but its existence and utilization are required by many graphics APIs...In every swap chain there are at least two buffers. The first framebuffer, the screenbuffer, is the buffer that is rendered to the output of the video card. The remaining buffers are known as backbuffers. Each time a new frame is displayed, the first backbuffer in the swap chain takes the place of the screenbuffer, this is called \textbf{presentation} or \textbf{swapping}...(see also Figure \ref{fig:swap-chain-depiction})
-		\end{quotation}
-	
-		\begin{figure}
-			\centering
-			\includegraphics[width=0.7\linewidth]{swap-chain-depiction}
-			\caption{An abstract depiction of the swap chain. \href{https://en.wikipedia.org/wiki/File:Swap_chain_depiction.svg}{Source.}}
-			\label{fig:swap-chain-depiction}
-		\end{figure}
 
-	In other words, the output of the graphics device is buffered through the use of swap chains, in order to give the end-user the illusion that rendering is smooth, by making the frames appear one after the other at a constant, rather than variable rate.
-	
-	Implementation of swap chains can depend heavily upon the architecture of a physical device. However, recall that the core Vulkan API is platform and physical device agnostic, so it does not deal with device specific details related to swap chains. To expose capabilities provided by a particular platform or physical device, the core API has to be extended by special extensions, many of which are provided and maintained by the Khronos Group itself. It will be necessary to augment the core API with an extension that will allow it to deal with physical devices' specific implementations of swap chains. 
-	
+\section{The Graphics Pipeline}
+    In the coming sections, we will familiarize ourselves with Vulkan extensions that are gearted towards real time computer graphics applications. Since the Vulkan specification often makes references to concepts related to this process, having an understanding of how it works will be helpful.
+
+    The creation (\inquotes{rendering}) of 3D images using a computer can be broadly separated into categories:
+        \begin{enumerate}
+            \item ahead-of-time rendering: these rendering processes are well suited towards creating 3D images which require time-intensive computations (e.g. for lighting, see: https://en.wikipedia.org/wiki/Ray_tracing_(graphics)) to render highly realistic scenes, detailed animations, or other advanced effects; used for movies, game cut scenes, 3D art, etc.
+            
+            \item on-demand rendering: these rendering processes are well suited towards creating 3D images for interactive applications, such as games or user interfaces, which require something like at least 25 frames per second to produce the illusion of smooth animation; clever techniques are used to minimize rendering cost (for example, reflections on glossy surfaces, but instead the scene from the perspective of the surface would be painted on as an approximation), at the cost of losing realistic detail, or other advanced features
+        \end{enumerate}
+
+    
+    The graphics pipeline is a conceptual organization of computing resources to handle the second case of on-demand rendering. APIs like Vulkan and its extensions are designed along the concepts of the graphics pipeline, which represent a series of computations (perhaps with loops?) data is passed through, with the end product being an image which can be displayed to the user. Vulkan allows the user to build and order the operations within the pipeline as required. The ordering of operations within a pipeline is referred to as "synchronization". We now look at an example of a typical Vulkan pipeline.
+    
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.7\linewidth]{Graphics_pipeline_2_en.svg}
+        \caption{A diagram of a graphics pipeline showing only its most fundamental components. By \href{https://commons.wikimedia.org/wiki/File:Graphics_pipeline_2_en.svg}{PaterMcFly / Vierge Marie}.}
+        \label{fig:graphicspipeline2en}
+    \end{figure}
+    
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.7\linewidth]{vulkan-graphics-pipeline}
+        \caption{A Vulkan graphics pipeline, showing all the different components that could be utilized. From the Vulkan specification.}
+        \label{fig:vulkan-graphics-pipeline}
+    \end{figure}
+    
+    The application provides computations that are run external to the pipeline. It selects which scenes need to be rendered, takes into account user input, collisions between physical object models, networking, and so on; in other words, it runs all the computations needed to provide the program of interest as a whole, and delegates graphics rendering to the graphics pipeline---when using Vulkan, the application does so by issuing drawing commands. This quote from the Vulkan specification shows how objects we have seen such as queues and command buffers come together to deliver drawing commands: 
+        \begin{quotation}
+            Drawing commands (commands with Draw in the name) provoke work in a graphics pipeline. Drawing commands are recorded into a command buffer and when executed by a queue, will produce work which executes according to the bound graphics pipeline. A graphics pipeline must be bound to a command buffer before any drawing commands are recorded in that command buffer.
+        \end{quotation}
+    After the application has issued graphics instructions using draw commands, these commands are transferred to the \inquotes{Input Assembler}, which puts together triangles, lines and points (geometric primitives) based on the requested commands. 
+
+    Once these primitives have been generated, they are passed onto the Vertex Shader, which every Vulkan graphics pipeline must contain. The \inquotes{Vertex Shader} (\inquotes{shader} is simply jargon for a program for executing highly parallelizable tasks: for example, executing some instruction on a large number of vertices as input) computes the positions of the points and vertices assembled by the Input Assembler; one can think of the Input Assembler as defining the relationships between the various geometric primitives, based on drawing commands, but these primitives are not yet placed concretely in space, as this will depend upon the viewing angle, the zoom level, and so on. Having generated vertex data using the Vertex Shader, one can choose to pass this data through optional \inquotes{Tesselation} and \inquotes{Geometry} Shaders, which can do things like create more advanced shapes programmatically from primitives. 
+
+    The vertex data is then passed through the Vertex Post-Processing step, where vertices which will not fit into the viewing area (see \href{https://en.wikipedia.org/wiki/Viewing_frustum}{related Wikipedia article}) are \inquotes{clipped}: that is, they will be essentially removed, since they will not be viewed within the scene. This way, computationally intensive operations do not need to be run on objects which will not be viewed in the first place. The clipped vertex data is then passed to the \inquotes{Rasterization} stage. 
+
+    Rasterization refers to the process of converting a mathematical data representing an image (as we have at this stage of the pipeline, where our scene is made of primitives defined by their coordinates) into a 2D pixel image representation. Pixels are stored in memory using \inquotes{framebuffers} (\inquotes{frame} for an image frame, and \inquotes{buffer} for storage memory). The data Rasterization produces for a given pixel (its $(x, y)$ coordinates, address within the framebuffer, colour, depth, etc.) is called a "fragment" (see \href{https://en.wikipedia.org/wiki/Fragment_(computer_graphics)}{related Wikipedia article}). The next steps in the pipeline perform calculations which may modify the fragment. For instance, in the Early Per-Fragment tests stage, a technique called z-buffering (see \href{https://en.wikipedia.org/wiki/Z-buffering}{related Wikipedia article}) is used to figure out how objects in the scene occlude each other, depending on their \inquotes{depth} within the scene. This technique requires some additional memory per pixel, called the \inquotes{depth/stencil attachment} to keep track of the depth of various objects. Essentially, an attachment is a piece of memory, capable of being addressed in a per-pixel manner, that shaders can refer to (and even modify) as necessary. So, additional shaders and tests can be conducted, to perform a variety of operations needed to determine what data each fragment should finally contain (see the \href{https://en.wikipedia.org/wiki/Fragment_(computer_graphics)}{Wikipedia article on Fragments} for more examples of such operations). 
+
+    There is some general vocabulary to talk about this stage of rendering, where each fragment is being updated based on the colours attached to objects, lighting, depth, and so on. A \inquotes{subpass} is a phase of rendering that reads and writes into certain attachments. Rendering commands, provided by the user are recorded in association with a particular subpass. Subpasses make up a \inquotes{render pass}, which is a collection attachments, subpasses, and \inquotes{subpass descriptions}. A subpass description describes which attachments are associated with a subpass (and whether they are read/write). 
+
+    Some common type of attachments that are referred to in the specification are:
+        \begin{itemize}
+            \item color attachments: these include color information (perhaps also including how these colours should be blended) regarding various scene objects
+            
+            \item depth/stencil attachments: these are typically used for z-buffering (recall the Wikipedia article on this technique), and may be more specially called "depth attachments" in that case; otherwise, "stencil attachments" could refer to stenciling, which is a simple way of defining what parts of the screen are finally visible to the user (conceptually: if for example, if one wants to model looking through the keyhole of a door, one could "apply" a keyhole shaped stencil, which would block rendering of all pixels that are not within the keyhole)
+            
+            \item resolve attachments: useful in more advanced techniques, they store output data from programs (shaders?) which take into account multiple input attachments, or take into account how the data in a fragment might be influenced by its neighbours
+        \end{itemize}
+    
+    Once a framebuffer is filled out with the finalized data in each fragment, it can be displayed to the user. Assuming the application is running on a personal computer, this would be done with the help of the PC's OS and accompanying \inquotes{window system}. However, the core Vulkan API doesn't assume this is a universal intention, so functionality relevant to this end is packaged separately in a Khronos (i.e. \inquotes{Official}) extensions, such as: "Swapchain", "Surface", "Win32Surface" or "XlibSurface". 
+
+    The Vulkan specification defines \inquotes{presentation engine} as:
+        \begin{quotation}
+            The presentation engine is an abstraction for the platform’s compositor or display engine.
+        \end{quotation}
+    Vulkan provides an API for interaction with the presentation engine, which is an abstraction for all the pieces of hardware and software which take in graphics information, and then display it. 
+
+    Importantly, the presentation owns \inquotes{presentable images}. One can think of these as blank slates which the application borrows from the presentation engine in order to fill it with relevant information (e.g. some graphics) (from framebuffers?). Once the application has filled in the presentable image, it returns it to the presentation engine, which will manage the display of the image. In particular, the presentation image doesn't simply paint the image onto a display as soon as the application hands it back, but rather, buffers presentable images through an abstraction called the \inquotes{swap chain}. In some sense, swap chains are an abstraction that facilitate the illusion of real-time, as Wikipedia explains:
+        \begin{quotation}
+            In computer graphics, a swap chain is a series of virtual framebuffers utilized by the graphics card and graphics API for frame rate stabilization and several other functions. The swap chain usually exists in graphics memory, but it can exist in system memory as well. The non-utilization of a swap chain may result in stuttering rendering, but its existence and utilization are required by many graphics APIs...In every swap chain there are at least two buffers. The first framebuffer, the screenbuffer, is the buffer that is rendered to the output of the video card. The remaining buffers are known as backbuffers. Each time a new frame is displayed, the first backbuffer in the swap chain takes the place of the screenbuffer, this is called "presentation" or swapping...
+        \end{quotation}
+    The Vulkan specification writes:
+        \begin{quotation}
+            A swap chain is an abstraction for an array of presentable images that are associated with a surface. The presentable images are represented by `VkImage` objects created by the platform. One image (which can be an array image for multiview/stereoscopic-3D surfaces) is displayed at a time, but multiple images can be queued for presentation. An application renders to the image, and then queues the image for presentation to the surface.
+        \end{quotation}
+
+    The presentation engine is exposed via Vulkan through its relevant extensions. The key components of the presentation engine are:
+        \begin{itemize}
+            \item windowing system integration (WSI): a process responsible for organizing the display of data emitted by a phsyical device. A "platform" is an abstraction for a window system (e.g. X Window System, MS Windows, Mir, Wayland, Android), an OS, or some combination of the above (e.g. MS Windows, Wayland, Android)---basically, whatever the \inquotes{platform} needs to display graphics data. Not all physical devices will have WSI support, and not all queue families on a physical device might support \inquotes{presentation} of images to a specified surface. Thus, the application will need to find a suitable physical device, and relevant queue families on it which support a specified surface.
+            
+            \item \inquotes{surface}: an abstraction of a display surface. In particular, the surface abstracts away a lot of the platform specific details of what windowing systems may call a \inquotes{window}.
+            
+            \item \inquotes{swap chain}: abstraction providing buffering of presentable images. 
+        \end{itemize}
+
+    We will now learn how to initialize a swap chain.
+
+    
+\section{4: \texttt{init-swap-chain.rs}}
+
     Recall the info "struct" we had to fill out in order to create a logical device:
 \begin{minted}{c}
 typedef struct VkDeviceCreateInfo {
@@ -530,125 +594,209 @@ typedef struct VkDeviceCreateInfo {
 } VkDeviceCreateInfo;
 \end{minted}
 
-	Previously, \cil{enabledExtensionCount} and \cil{ppEnabledExtensionNames} were ignored, but now we will specify extension \texttt{"VK\_KHR\_swapchain"} as enabled. The following steps are necessary, using \ash:
+	Previously, \cil{enabledExtensionCount} and \cil{ppEnabledExtensionNames} were ignored, but now we will specify extension \texttt{"VK\_KHR\_swap chain"} as enabled. The following steps are necessary, using \ash:
 		\begin{enumerate}
-			\item \ril{use ash::extensions::Swapchain} loads the module which contains swap chain extension related stuff
+			\item \ril{use ash::extensions::swap chain} loads the module which contains swap chain extension related stuff
 				
-			\item create an array with the string \texttt{"VK\_KHR\_swapchain"} by using the \ril{name} static \ril{impl} of \ril{Swapchain} (track down the source for \ril{ash::extensions::Swapchain::name} as an exercise): 
+			\item create an array with the string \texttt{"VK\_KHR\_swap chain"} by using the \ril{name} static \ril{impl} of \ril{swap chain} (track down the source for \ril{ash::extensions::swap chain::name} as an exercise): 
 \begin{minted}{rust}
-let device_extension_names_pointers = [Swapchain::name().as_ptr()];
+let device_extension_names_pointers = [swap chain::name().as_ptr()];
 \end{minted}
 			
 			\item set the \ril{enabled_extension_count} and \ril{pp_enabled_extension_names} members of the \ril{vk::DeviceCreateInfo} "struct" we fill out using \ril{device_extension_names_pointers.len() as u32} and \ril{device_extension_names_pointers} respectively
 		\end{enumerate}
 	
-	Now, the \ril{device} created in "init-swap-chain.rs" will have the swapchain extension enabled. 
+	Now, the \ril{device} created in "init-swap-chain.rs" will have the swap chain extension enabled. Note that all the work was essentially done by the platform dependent conditionally compiled function \ril{get_extension_names}. 
 	
-	In C-ish, one would proceed further by setting up "struct" \cil{VkSwapchainCreateInfoKHR}:
-\begin{minted}{c}
-typedef struct VkSwapchainCreateInfoKHR {
-	VkStructureType                  sType;
-	const void*                      pNext;
-	VkSwapchainCreateFlagsKHR        flags;
-	VkSurfaceKHR                     surface;
-	uint32_t                         minImageCount;
-	VkFormat                         imageFormat;
-	VkColorSpaceKHR                  imageColorSpace;
-	VkExtent2D                       imageExtent;
-	uint32_t                         imageArrayLayers;
-	VkImageUsageFlags                imageUsage;
-	VkSharingMode                    imageSharingMode;
-	uint32_t                         queueFamilyIndexCount;
-	const uint32_t*                  pQueueFamilyIndices;
-	VkSurfaceTransformFlagBitsKHR    preTransform;
-	VkCompositeAlphaFlagBitsKHR      compositeAlpha;
-	VkPresentModeKHR                 presentMode;
-	VkBool32                         clipped;
-	VkSwapchainKHR                   oldSwapchain;
-} VkSwapchainCreateInfoKHR;
-\end{minted}
-	\begin{itemize}
-		\item \cil{sType} and \cil{pNext} are standard info "struct" fields, while \cil{flags} is for future use and set to 0 
-		
-		\item \cil{surface}: surface to which this swap chain will present to (more about surfaces coming up right after)
-		
-		\item \cil{minImageCount}: how \inquotes{deep} the swap chain should be (how many buffers it should have between input and output) 
-		
-		\item \cil{imageFormat}: format of the data representing the images (i.e. pixel encoding format) the swap chain will be handling, a value from the \href{http://vulkan-spec-chunked.ahcox.com/ch31s03.html#VkFormat}{\cil{VkFormat} "enum"}
-        
-		\item \cil{imageColorSpace}: specifies which \href{https://en.wikipedia.org/wiki/Color_space}{colour space} the presentation engine will interpret each pixel (recall that pixels store color information) \href{http://vulkan-spec-chunked.ahcox.com/ch29s05.html#VkColorSpaceKHR}{\cil{VkColorSpaceKHR}}
-		
-		\item \cil{imageExtent}: maximum size of the images the swap chain will handle
-		
-		\item \cil{imageArrayLayers}: relevant for applications that will be presenting monitors that take advantage of the \href{https://en.wikipedia.org/wiki/Stereo_display}{stereoscopic effect} to provide the illusion of 3D images---we'll just set the value to 1, as we are making an application that will display on standard monitors
-		
-		\item \cil{imageUsage}: a bitmask of \href{http://vulkan-spec-chunked.ahcox.com/ch11s03.html#VkImageUsageFlagBits}{VkImageUsageFlagBits} specifying how the application will use the images
-		
-		\item \cil{imageSharingMode}: a value from the \href{https://www.khronos.org/registry/vulkan/specs/1.0/man/html/VkSharingMode.html}{VkSharingMode} "enum", specifying whether access to data in the swap chain is exclusive to queues from one family, or whether access is open to queues from multiple queue families:
-			\begin{itemize}
-				\item \cil{queueFamilyIndexCount} and \cil{pQueueFamilyIndices}: if concurrent access between queue families is allowed, which families have permission?
-			\end{itemize}
-		
-		\item \cil{preTransform}: a bitmask of \href{http://vulkan-spec-chunked.ahcox.com/ch29s05.html#VkSurfaceTransformFlagBitsKHR}{VkSurfaceTransformFlagBitsKHR} bits, which specifies how to transform (e.g. rotate, mirror, etc.) the images in the swap chain relative to the \inquotes{natural} orientation of the presentation device (e.g. a monitor); to understand this better, consider this contrived example: hanging upside down while using a computer is a new health fad, but your monitor is locked to the table its on, so your application sets the \cil{preTransform} bitmask to rotate the image by $\ang{180}$ so that the image appears right side up while you're upside down
-		
-		\item \cil{compositeAlpha}: a bitmask of \href{http://vulkan-spec-chunked.ahcox.com/ch29s05.html#VkCompositeAlphaFlagBitsKHR}{VkCompositeAlphaFlagBitsKHR} bits, indicating how the images should be \href{https://en.wikipedia.org/wiki/Alpha_compositing}{alpha composited} together
-		
-		\item \cil{presentMode}: value from \href{http://vulkan-spec-chunked.ahcox.com/ch29s05.html#VkPresentModeKHR}{\cil{VkPresentModeKHR}} "enum"; how will the presentation engine ask for data from the swap chain?
-		
-		\item \cil{clipped}: should the underlying infrastructure care about pixels that are outside the image extents relevant for this swap chain?
-		
-		\item \cil{oldSwapchain}: pointer to the old swap chain that this new swap chain is going to replace (\cil{NULL} usually)
-		\item 
-	\end{itemize}
-	
-	It is apparent that there is a deep infrastructure layer involved in taking image data from a physical device and displaying it. The rest of this section will describe how to fill out the above info "struct".
-	
-	The \inquotes{windowing system} (e.g. X Window System, MS Windows, Wayland) is responsible for organizing the display of data emitted by a phsyical device: a process termed \inquotes{Window System Integration}, or WSI. To this end, windowing systems provide a \inquotes{surface} abstraction onto which output data is \inquotes{drawn}. There are extensions available which allow Vulkan to integrate with different windowing systems. The relevant extension in this case will be specified in the info "struct" used to create the instance (not the logical device!).
-	
-	We load the relevant extension modules: \ril{use ash::extensions::{Surface, Win32Surface, XlibSurface}}, and \href{https://doc.rust-lang.org/book/first-edition/conditional-compilation.html}{conditionally compile} functions by taking into account the host platform:
-\begin{minted}{rust}
-#[cfg(all(unix, not(target_os = "android")))]
-fn extension_names() -> Vec<*const i8> {
-	vec![
-		Surface::name().as_ptr(),
-		XlibSurface::name().as_ptr(),
-	]
-}
-
-#[cfg(all(windows))]
-fn extension_names() -> Vec<*const i8> {
-	vec![
-		Surface::name().as_ptr(),
-		Win32Surface::name().as_ptr(),
-	]
-}
-\end{minted}
-
-	A surface needs a \inquotes{window} associated with it. In Rust as in C-ish, there are various windowing libraries, but this tutorial uses \ril{extern crate winit}. This document will not discuss in depth the internals of a window system, which depend heavily upon the particular platform the application is running on. These details are explained in documentation for the \ril{winit} crate, amongst other sources.
-	
-	The following code in "init-swap-chain.rs" creates a window:
-		\begin{minted}{rust}
+    We eventually want to create a surface, but a surface needs a \inquotes{window} associated with it. In Rust as in C-ish, there are various windowing libraries, but this tutorial uses \ril{extern crate winit}. This document will not discuss in depth the internals of a window system, which depend heavily upon the particular platform the application is running on. These details are explained in documentation for the \ril{winit} crate, amongst other sources.
+    
+    The following code in "init-swap-chain.rs", within the function \ril{create_events_loop_and_window} creates an event loop and a window:
+    \begin{minted}{rust}
 let events_loop = winit::EventsLoop::new();
 
 let window = winit::WindowBuilder::new()
-.with_title("Ash - Example")
-.with_dimensions(window_width, window_height)
-.build(&events_loop)
-.unwrap();
-		\end{minted}
-			
-	First, an \href{https://en.wikipedia.org/wiki/Event_loop#Windows_applications}{event loop} is created. The event loop handles messages sent between the user interface (the window), and our application (e.g. user input). Further details are presented in \href{https://docs.rs/winit/0.10.0/winit/struct.EventsLoop.html}{the documentation} for \ril{winit::EventsLoop}. Next, a window is created using self-explantory calls setting the title, dimensions and event loop. 
+    .with_title("Ash - Example")
+    .with_dimensions(window_width, window_height)
+    .build(&events_loop)
+    .unwrap();
+    \end{minted}
+    
+    The event loop handles messages sent between the user interface (the window), and our application (e.g. user input). Further details are presented in \href{https://docs.rs/winit/0.10.0/winit/struct.EventsLoop.html}{the documentation} for \ril{winit::EventsLoop}. A window is created using self-explantory calls setting the title, dimensions and event loop. Given the \ril{window} from a windowing system, we create an associated surface using a platform dependent conditionally compiled function \ril{create_surface}, which is defined within "init-swap-chain.rs".
+    
+    We now have a surface, but we have not yet found a physical device on which we can create logical devices. Previously, we found a physical device supporting graphics on our system. However, just like in the case of graphics, not all physical devices support presentation so this time we must find a physical device which supports both graphics and presentation. Essentially, a physical device supports graphics and presentation if it has queue families capable of supporting graphics and presentation operations. Some queue families may support both, but this is not always the case, so we will also need to determine which queue families on the physical device are of interest to us. All of this logic is handled in the function \ril{find_pdevice_with_queue_family_supporting_graphics_and_presentation}. Note that in order to call this function, we need to pass a reference to an instance of a surface extension loader provided through the \cil{Surface} Khronos extension. This extension allows us to do things like check if a physical device supports presentation to a specified surface; essentially, it contains all sorts of utilities for dealing with surfaces. To use the capabilities of the extension, we load in an instance of its loader, which handles our requests for various utilities. In particular, if we were using C-ish, we would query for a queue's presentation support relative to a surface using the function:
+    \begin{minted}{c}
+VkResult vkGetPhysicalDeviceSurfaceSupportKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex,
+    VkSurfaceKHR                                surface,
+    VkBool32*                                   pSupported);
+    \end{minted}
+    \begin{itemize}
+        \item \cil{VkPhysicalDevice}: the physical device containing the queue
         
-    Given the \ril{window} from a windowing system, we create an associated surface using a platform dependent conditionally compiled function \ril{create_surface}, which is defined within "init-swap-chain.rs". 
+        \item \cil{queueFamilyIndex}: index of some queue family offered by the physical device
         
-    In the Wikipedia excerpt explaining swap chains at the start of this chapter, it was noted that processing of data emission from a physical device may be called \inquotes{swapping} or \inquotes{presenting}. So, given a surface, we look for graphics capable queues that able to support \inquotes{presentation} (i.e. communication of data to) to the surface, also known as \inquotes{supporting a surface}.  
+        \item \cil{surface}: the surface we created
         
+        \item \cil{pSupported}: a pointer to "bool32" sized memory; "vkGetPhysicalDeviceSurfaceSupportKHR" will set its value depending on whether the queue family supports presentation to the surface (True for supported, False for not supported)
+    \end{itemize}
+    In Rust-land, Ash's wrapper around the \ril{Surface} extension allows us to call the function `get_physical_device_surface_support_khr` through an instance of the surface extension loader.
+    
+    Having determined which physical device is of interest, and which queue families on it are relevant, we can now create logical device and set up queues on it, and then we can set up command buffers and pools managing those queues. 
+    
+	In C-ish, to create a swapchain, one would begin by setting up "struct" \cil{VkSwapchainCreateInfoKHR}. We will explore the fields of this "struct" in detail later, and for now we learn how to query the physical device for information about the surface we have associated with it, so that we can use this information to fill in \cil{VkSwapchainCreateInfoKHR} later. To query the physical device, we use the function:
+        \begin{minted}{c}
+VkResult vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+        VkPhysicalDevice                            physicalDevice,
+        VkSurfaceKHR                                surface,
+        VkSurfaceCapabilitiesKHR*                   pSurfaceCapabilities);
+        \end{minted}
+        
+    This function fills out the following \cil{struct}:
+        \begin{minted}{c}
+typedef struct VkSurfaceCapabilitiesKHR {
+    uint32_t                         minImageCount;
+    uint32_t                         maxImageCount;
+    VkExtent2D                       currentExtent;
+    VkExtent2D                       minImageExtent;
+    VkExtent2D                       maxImageExtent;
+    uint32_t                         maxImageArrayLayers;
+    VkSurfaceTransformFlagsKHR       supportedTransforms;
+    VkSurfaceTransformFlagBitsKHR    currentTransform;
+    VkCompositeAlphaFlagsKHR         supportedCompositeAlpha;
+    VkImageUsageFlags                supportedUsageFlags;
+} VkSurfaceCapabilitiesKHR;
+        \end{minted}
+    \begin{itemize}
+        \item \cil{minImageCount}: minimum number of images physical device supports for a swap chain interfacing with surface (will be at least one)
+        
+        \item \cil{maxImageCount}: maximum number of images physical device supports for a swap chain interfacing with surface (will be either 0, meaning that there is no upper limit (apart from memory) or greater than or equal to \cil{minImageCount}) 
+        
+        \item \cil{currentExtent}: current width and height of the surface, or special value ($0xFFFFFFFF$, $0xFFFFFFFF$) indicating that surface size is governed by the extent of a swap chain interfacing with it
+        
+        \item \cil{minImageExtent}: smallest valid swap chain extent for surface---width and height of the extent will be less than or equal to width and height of \cil{currentExtent} (unless \cil{currentExtent} is the special value)
+        
+        \item \cil{maxImageExtent}: largest valid swap chain extent for surface---width and height given by \cil{maxImageExtent} will be greater than or equal to width and height of \cil{minImageExtent} and greater than or equal to width and height of \cil{currentExtent} (unless \cil{currentExtent} is the special value)
+        
+        \item \cil{maxImageArrayLayers}: maximum number of layers presentable images can have for a swap chain created for this device and surface, and will be at least one---\inquotes{image layers} are views in a multiview/stereo surface for stereoscopic-3D applications
+        
+        \item \cil{supportedTransforms}: bitmask of \cil{VkSurfaceTransformFlagBitsKHR} indicating presentation transforms supported for the surface (at least one bit will be set); \cil{VkSurfaceTransformFlagBitsKHR} is an \cil{enum}:
+            \begin{minted}{c}
+typedef enum VkSurfaceTransformFlagBitsKHR {
+    VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR = 0x00000001,
+    VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR = 0x00000002,
+    VK_SURFACE_TRANSFORM_ROTATE_180_BIT_KHR = 0x00000004,
+    VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR = 0x00000008,
+    VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_BIT_KHR = 0x00000010,
+    VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_90_BIT_KHR = 0x00000020,
+    VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_180_BIT_KHR = 0x00000040,
+    VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_270_BIT_KHR = 0x00000080,
+    VK_SURFACE_TRANSFORM_INHERIT_BIT_KHR = 0x00000100,
+} VkSurfaceTransformFlagBitsKHR;
+            \end{minted}
+            
+            \begin{itemize}
+                \item \cil{VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR}: specifies that the \inquotes{identity} transformation (in mathematics, an identity operation returns its input unaffected) is applied to images being presented (i.e. no transformation is applied)
+                
+                \item \cil{VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR}: specifies that presented images are rotated 90 degrees clockwise
+                
+                \item \cil{VK_SURFACE_TRANSFORM_ROTATE_180_BIT_KHR}: specifies that presented images are rotated 180 degrees clockwise
+                
+                \item \cil{VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR}: specifies that presented images are rotated 270 degrees clockwise
+                
+                \item \cil{VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_BIT_KHR}: specifies that presented images are mirrored horizontally
+                
+                \item \cil{VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_90_BIT_KHR}:  specifies that presented images are mirrored horizontally, then rotated 90 degrees clockwise
+                
+                \item \cil{VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_180_BIT_KHR}: specifies that presented images are mirrored horizontally, then rotated 180 degrees clockwise
+                
+                \item \cil{VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_270_BIT_KHR}: specifies that presented images are mirrored horizontally, then rotated 270 degrees clockwise
+                
+                \item \cil{VK_SURFACE_TRANSFORM_INHERIT_BIT_KHR}: specifies that presentation transform is not specified, and is determined by mechanisms outside of Vulkan
+            \end{itemize}
+        
+        \item \cil{currentTransform}: current \cil{VkSurfaceTransformFlagBitsKHR} value for surface
+        
+        \item \cil{supportedCompositeAlpha}: bitmask of \cil{VkCompositeAlphaFlagBitsKHR}, representing alpha compositing modes supported by the surface on this physical device (at least one bit will be set) where \cil{} is an enum: 
+\begin{minted}{c}
+typedef enum VkCompositeAlphaFlagBitsKHR {
+    VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR = 0x00000001,
+    VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR = 0x00000002,
+    VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR = 0x00000004,
+    VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR = 0x00000008,
+} VkCompositeAlphaFlagBitsKHR;
+\end{minted}
+    \begin{itemize}
+        \item \cil{VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR}: alpha channel, if it exists, of images is ignored and assumed to have value 1.0 (note that opaque composition can be achieved regardless of alpha composition mode by either using image formats with no alpha component, or by ensuring that all pixels in the presentable images have an alpha of 1.0)
+        
+        \item \cil{VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR}: alpha channel, if it exists, of images is respected by the compositing process; non-alpha channels of images are expected to already be multiplied by the alpha channel by the application (see \inquotes{pre-multiplication} in Wikipedia's \href{https://en.wikipedia.org/wiki/Alpha_compositing}{Alpha compositing} article)
+        
+        \item \cil{VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR}: alpha channel, if it exists, of images is respected by the compositing process; compositor will multiply the non-alpha channels of the image by the alpha channel during compositing
+        
+        \item \cil{VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR}: treatment of images' alpha channel is unknown to the Vulkan API; application is responsible for setting composition mode using native window system commands, otherwise a platform-specific default will be used
+    \end{itemize}
+        
+        \item \cil{supportedUsageFlags}: bitmask of \cil{VkImageUsageFlagBits} representing how application can use presentable images of a swap chain associated with surface on the physical device. Recall that attachments are simply \inquotes{image-shaped} pieces of memory. Thus, any image can serve as storage for an attachment, and the words image and attachment in fact, start to blur in meaning, their exact purpose becoming clear depending on how they are used. For \cil{VkImageUsageFlagBits} settings to be used, \cil{VkPresentModeKHR} of the swap chain must be set to \cil{VK_PRESENT_MODE_IMMEDIATE_KHR}, \cil{VK_PRESENT_MODE_MAILBOX_KHR}, \cil{VK_PRESENT_MODE_FIFO_KHR} or \cil{VK_PRESENT_MODE_FIFO_RELAXED_KHR} (more on these modes later). \cil{VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT} must be included in the set but additional usage may also be supported. 
+        
+        \begin{minted}{c}
+typedef enum VkImageUsageFlagBits {
+    VK_IMAGE_USAGE_TRANSFER_SRC_BIT = 0x00000001,
+    VK_IMAGE_USAGE_TRANSFER_DST_BIT = 0x00000002,
+    VK_IMAGE_USAGE_SAMPLED_BIT = 0x00000004,
+    VK_IMAGE_USAGE_STORAGE_BIT = 0x00000008,
+    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT = 0x00000010,
+    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT = 0x00000020,
+    VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT = 0x00000040,
+    VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT = 0x00000080,
+} VkImageUsageFlagBits;
+        \end{minted}
+            \begin{itemize}
+                \item \cil{VK_IMAGE_USAGE_TRANSFER_SRC_BIT} specifies that image can be used as the source in a transfer command
+                
+                \item \cil{VK_IMAGE_USAGE_TRANSFER_DST_BIT} specifies that image can be used as the destination in a transfer command
+                
+                \item \cil{VK_IMAGE_USAGE_SAMPLED_BIT} specifies that the image can be sampled by a shader
+                
+                \item \cil{VK_IMAGE_USAGE_STORAGE_BIT} specifies that the image can be used as for general purpose storage
+                
+                \item \cil{VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT} specifies that the image can be used as a color or resolve (multi-sampling) attachment
+                
+                \item \cil{VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT} specifies that the image can be used as a depth/stencil attachment
+                
+                \item \cil{VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT} specifies that the memory bound to this image will have been allocated with the \cil{VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT}, which specifies that memory for the image is located on the physical device---this bit can be set for any image meant for use as a color, resolve, depth/stencil, or input attachment
+                
+                \item \cil{VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT} specifies that the image can be read from a shader as an input attachment and be used as an input attachment in a framebuffer
+            \end{itemize}
+    \end{itemize}
+
+    This info struct describing surface properties will be used to fill \cil{VkSwapchainCreateInfoKHR}, which is now introduced in full:
+    \begin{minted}{c}
+typedef struct VkSwapchainCreateInfoKHR {
+    VkStructureType                  sType;
+    const void*                      pNext;
+    VkSwapchainCreateFlagsKHR        flags;
+    VkSurfaceKHR                     surface;
+    uint32_t                         minImageCount;
+    VkFormat                         imageFormat;
+    VkColorSpaceKHR                  imageColorSpace;
+    VkExtent2D                       imageExtent;
+    uint32_t                         imageArrayLayers;
+    VkImageUsageFlags                imageUsage;
+    VkSharingMode                    imageSharingMode;
+    uint32_t                         queueFamilyIndexCount;
+    const uint32_t*                  pQueueFamilyIndices;
+    VkSurfaceTransformFlagBitsKHR    preTransform;
+    VkCompositeAlphaFlagBitsKHR      compositeAlpha;
+    VkPresentModeKHR                 presentMode;
+    VkBool32                         clipped;
+    VkSwapchainKHR                   oldSwapchain;
+} VkSwapchainCreateInfoKHR;
+    \end{minted}
+    
 \section{Thanks}
 	The information in this tutorial was derived from multiple sources (\inquotes{"<search engine> is your best friend!"}), but some stand prominent amongst them. Grateful thanks is owed to:
 		\begin{enumerate}
-			\item \href{https://vulkan.lunarg.com/doc/sdk/1.0.65.1/windows/tutorial/html/index.html}{LunarG's Vulkan Samples Progression}, whose progression structure I found comforting, and thus stole, along with some conceptual explanations. 
-			
-			\item Alexander Overvoorde's \href{https://vulkan-tutorial.com/}{Vulkan Tutorial}, whose rich coverage often provided some clues on things other's assumed a beginner would know---this tutorial does not even come close to covering the range of material Overvoorde's tutorial does.
+			\item \href{https://vulkan.lunarg.com/doc/sdk/1.0.65.1/windows/tutorial/html/index.html}{LunarG's Vulkan Samples Progression}, whose progression structure I think is good for learning, and thus re-used.
 			
 			\item \href{Maik Klein}{https://github.com/MaikKlein}, who began writing \ash, and is its prime contributor. Also, Maik and \href{https://github.com/msiglreith}{msiglreith} on \ash's Gitter were happy to answer my questions.
 			

@@ -1,13 +1,12 @@
 \boolfalse {citerequest}\boolfalse {citetracker}\boolfalse {pagetracker}\boolfalse {backtracker}\relax 
 \contentsline {section}{\numberline {}Setup}{1}{section.1}
 \contentsline {section}{\numberline {}``C-ish''}{2}{section.2}
-\contentsline {section}{\numberline {}Introduction to Vulkan}{2}{section.3}
-\contentsline {section}{\numberline {}0: \texttt {init-instance.rs}}{3}{section.4}
-\contentsline {section}{\numberline {}1: \texttt {enumerate-devices.rs}}{6}{section.5}
-\contentsline {section}{\numberline {}2: \texttt {init-device.rs}}{7}{section.6}
-\contentsline {subsection}{\numberline {6.1}\texttt {init-device-0.rs}}{7}{subsection.6.1}
-\contentsline {subsection}{\numberline {6.2}\texttt {init-device-1.rs}}{8}{subsection.6.2}
-\contentsline {section}{\numberline {}\texttt {init-command-buffer.rs}}{10}{section.7}
-\contentsline {section}{\numberline {}\texttt {init-swap-chain.rs}}{13}{section.8}
-\contentsline {subsection}{\numberline {8.1}Creating a window}{17}{subsection.8.1}
-\contentsline {section}{\numberline {}Thanks}{17}{section.9}
+\contentsline {section}{\numberline {}Motivation}{2}{section.3}
+\contentsline {section}{\numberline {}Introduction to Vulkan}{3}{section.4}
+\contentsline {section}{\numberline {}0: \texttt {init-instance.rs}}{4}{section.5}
+\contentsline {section}{\numberline {}1: \texttt {enumerate-devices.rs}}{7}{section.6}
+\contentsline {section}{\numberline {}2: \texttt {init-device.rs}}{8}{section.7}
+\contentsline {subsection}{\numberline {7.1}\texttt {init-device-and-queue.rs}}{9}{subsection.7.1}
+\contentsline {section}{\numberline {}3: \texttt {init-command-buffer.rs}}{11}{section.8}
+\contentsline {section}{\numberline {}4: \texttt {init-swap-chain.rs}}{14}{section.9}
+\contentsline {section}{\numberline {}Thanks}{18}{section.10}

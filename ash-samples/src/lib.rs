@@ -41,6 +41,7 @@ pub unsafe fn init_instance_without_extensions(app_name: &str) -> (Entry<V1_0>, 
     };
 
     println!("Creating instance...");
+
     let entry = Entry::new().unwrap();
     let instance: Instance<V1_0> = entry
             .create_instance(&create_info, None)
@@ -104,35 +105,29 @@ pub fn find_relevant_pdevice_and_queue_family(
         .nth(0)
 }
 
-
 pub unsafe fn clean_up_and_panic(
     message: &str,
     instance: Instance<V1_0>,
-    some_device: Option<Device<V1_0>>,
-    some_pool: Option<vk::CommandPool>,
+    some_ldevice: Option<Device<V1_0>>,
+    pools: Vec<vk::types::CommandPool>,
 ) -> ! {
-    clean_up(instance, some_device, some_pool);
+    clean_up(instance, some_ldevice, pools);
     panic!("panic: {}", message);
 }
 
 pub unsafe fn clean_up(
     instance: Instance<V1_0>,
-    some_device: Option<Device<V1_0>>,
-    some_pool: Option<vk::CommandPool>,
-) {
-    match some_device {
-        Some(device) => {
-            match some_pool {
-                Some(pool) => {
-                    println!("Destroying pool...");
-                    device.destroy_command_pool(pool, None);
-                }
-                None => {}
-            };
+    some_ldevice: Option<Device<V1_0>>,
+    pools: Vec<vk::CommandPool>) {
+    match some_ldevice {
+        Some(ldevice) => {
+            for pool in pools {
+                ldevice.destroy_command_pool(pool, None);
+            }
 
-            println!("Destroying device...");
-            device.destroy_device(None);
-        }
+            println!("Destroying ldevice...");
+            ldevice.destroy_device(None);
+        },
         None => {}
     };
 

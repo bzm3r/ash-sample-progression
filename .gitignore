@@ -11,3 +11,7 @@ tutorial-doc/*.bcf
 tutorial-doc/*.run.xml
 tutorial-doc/_minted-ash-tutorial/
 ash-samples/.idea
+
+
+They hypothesized that they were missing some spatial effects, in that the growth factor released by a fibroblast likely cannot support macrophages throughout the dish, but only in its vicinity. With this in mind, they scaled their ODE model to better match experimental results, but the details of this procedure are unclear to me. In contrast, the FSM model suggests that simply including some limitations on the self-sustaining ability of fibroblasts (which also be occurring due to spatial effects!), is enough to better match experimental results. Crucially, in contrast to [4] the FSM model suggests that if spatial limitations exist, it is not macrophages that are being affected by spatial limitations, but fibroblasts. That is, it may be that that fibroblasts are only able to support other fibroblasts in their vicinity, so those fibroblasts that are away from larger clusters may not receive as much growth factor. Alternatively, one can hypothesize that fibroblast growth factor is self-stimulating: that is, release of autocrine growth factor by fibroblasts prompts further production of it. Thus, a sufficient mass of fibroblasts is required to push autocrine growth factor production to levels that balance with endocytosis (degradation) of the same growth factor by fibroblasts.
+
