@@ -103,19 +103,16 @@ fn main() {
         };
 
         let surface_formats =
-            match surface_extension_loader.get_physical_device_surface_formats_khr(pdevice, surface) {
-                Ok(surface_formats) => surface_formats,
-                Err(error) => ash_samples::clean_up_and_panic(
-                &format!("Failed to get surface's supported formats: {:?}", error),
-                instance, Some(ldevice),
-                vec![presentation_command_pool, graphics_command_pool]),
+            match surface_extension_loader.
+                get_physical_device_surface_formats_khr(pdevice, surface) {
+                    Ok(surface_formats) => surface_formats,
+                    Err(error) => ash_samples::clean_up_and_panic(
+                                &format!("Failed to get surface's supported formats: {:?}", error),
+                                instance, Some(ldevice),
+                                vec![presentation_command_pool, graphics_command_pool]),
         };
 
-        let surface_formats = surface_extension_loader
-            .get_physical_device_surface_formats_khr(pdevice, surface)
-            .unwrap();
-
-        let surface_format = surface_formats
+        let surface_format = match surface_formats
             .iter()
             .map(|sfmt| match sfmt.format {
                 vk::Format::Undefined => vk::SurfaceFormatKHR {
@@ -124,8 +121,13 @@ fn main() {
                 },
                 _ => sfmt.clone(),
             })
-            .nth(0)
-            .expect("Unable to find suitable surface format.");
+            .nth(0) {
+            Some(surface_format) => surface_format,
+            _ => ash_samples::clean_up_and_panic(
+                &format!("Failed to extract surface format."),
+                instance, Some(ldevice),
+                vec![presentation_command_pool, graphics_command_pool]),
+        };
 
         let surface_resolution = match surface_capabilities.current_extent.width {
             std::u32::MAX => vk::Extent2D {
@@ -144,9 +146,14 @@ fn main() {
             surface_capabilities.current_transform
         };
 
-        let present_modes = surface_extension_loader
-            .get_physical_device_surface_present_modes_khr(pdevice, surface)
-            .unwrap();
+        let present_modes = match surface_extension_loader
+            .get_physical_device_surface_present_modes_khr(pdevice, surface) {
+            Ok(present_modes) => present_modes,
+            Err(error) => ash_samples::clean_up_and_panic(
+                &format!("Failed to get surface's present modes: {:?}", error),
+                instance, Some(ldevice),
+                vec![presentation_command_pool, graphics_command_pool]),
+        };
 
         let present_mode = present_modes
             .iter()
@@ -175,9 +182,51 @@ fn main() {
             queue_family_index_count: 0,
         };
 
-        let swapchain = swapchain_loader
-            .create_swapchain_khr(&swapchain_create_info, None)
-            .unwrap();
+        let swapchain = match swapchain_loader
+            .create_swapchain_khr(&swapchain_create_info, None) {
+            Ok(swapchain) => swapchain,
+            Err(error) => ash_samples::clean_up_and_panic(
+                &format!("Failed to create swapchain: {:?}", error),
+                instance, Some(ldevice),
+                vec![presentation_command_pool, graphics_command_pool]),
+        };
+
+        let present_images = match swapchain_loader
+            .get_swapchain_images_khr(swapchain) {
+            Ok(present_images) => present_images,
+            Err(error) => ash_samples::clean_up_and_panic(
+                &format!("Failed to get presentable images from swapchain: {:?}", error),
+                instance, Some(ldevice),
+                vec![presentation_command_pool, graphics_command_pool]),
+        };
+
+        let present_image_views: Vec<vk::ImageView> = present_images
+            .iter()
+            .map(|&image| {
+                let create_view_info = vk::ImageViewCreateInfo {
+                    s_type: vk::StructureType::ImageViewCreateInfo,
+                    p_next: ptr::null(),
+                    flags: Default::default(),
+                    view_type: vk::ImageViewType::Type2d,
+                    format: surface_format.format,
+                    components: vk::ComponentMapping {
+                        r: vk::ComponentSwizzle::R,
+                        g: vk::ComponentSwizzle::G,
+                        b: vk::ComponentSwizzle::B,
+                        a: vk::ComponentSwizzle::A,
+                    },
+                    subresource_range: vk::ImageSubresourceRange {
+                        aspect_mask: vk::IMAGE_ASPECT_COLOR_BIT,
+                        base_mip_level: 0,
+                        level_count: 1,
+                        base_array_layer: 0,
+                        layer_count: 1,
+                    },
+                    image: image,
+                };
+                ldevice.create_image_view(&create_view_info, None).unwrap()
+            })
+            .collect();
 
         println!("Cleaning up...");
         ash_samples::clean_up(instance, Some(ldevice), vec![graphics_command_pool, presentation_command_pool]);

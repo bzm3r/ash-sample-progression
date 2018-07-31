@@ -793,6 +793,92 @@ typedef struct VkSwapchainCreateInfoKHR {
 } VkSwapchainCreateInfoKHR;
     \end{minted}
     
+    \begin{itemize}    
+        \item \cil{sType}: type of this structure, which is \cil{VkSwapchainCreateInfoKHR}
+        
+        \item \cil{pNext}: set to \cil{NULL} for now
+        
+        \item \cil{flags}: bitmask of \cil{VkSwapchainCreateFlagBitsKHR} indicating swapchain creation settings
+            \begin{minted}{c}
+typedef enum VkSwapchainCreateFlagBitsKHR {
+    VK_SWAPCHAIN_CREATE_SPLIT_INSTANCE_BIND_REGIONS_BIT_KHR = 0x00000001,
+    VK_SWAPCHAIN_CREATE_PROTECTED_BIT_KHR = 0x00000002,
+} VkSwapchainCreateFlagBitsKHR;
+            \end{minted}
+            \begin{itemize}
+                \item \cil{VK_SWAPCHAIN_CREATE_SPLIT_INSTANCE_BIND_REGIONS_BIT_KHR}: when set, specifies that images created from the swapchain can be stored in pieces of memory across a number of physical devices (an advanced feature we will not be using)
+                
+                \item \cil{VK_SWAPCHAIN_CREATE_PROTECTED_BIT_KHR}: when set, specifies that images created from the swapchain are protected (i.e. they are inaccessible to the application)
+            \end{itemize}
+        
+        \item \cil{surface}: surface onto which the swapchain will present images
+        
+        \item \cil{minImageCount}: is the minimum number of presentable images that the application needs
+        
+        \item \cil{imageFormat}: \cil{VkFormat} value specifying format of swapchain images (there are many different types of image formats supported and one fairly common one is "B8G8R8\_UNORM" which stores each pixel into memory by providing 8 bits of space for the B value in the first component, 8 bits of space for the G value in the second component, and 8 bits of space for the R value in the third component; 8 bits of memory can store integers from 0 to 255 inclusive (256 values total), but one can also store such an integer as a float by normalizing it (dividing it) by 255, hence "UNORM" for \inquotes{unsigned norm})
+        
+        \item \cil{imageColorSpace}: \cil{VkColorSpaceKHR} value specifying how the presentation engine interprets each pixel in an image as a color (currently only \cil{VK_COLOR_SPACE_SRGB_NONLINEAR_KHR} is supported) 
+        
+        \item \cil{imageExtent}: size (in pixels) of the swapchain images
+        
+        \item \cil{imageArrayLayers}: number of views in a multiview/stereo surface (always set to 1 for us, since we do not use stereo surfaces)
+        
+        \item \cil{imageUsage}: bitmask of \cil{VkImageUsageFlagBits} describing the intended usage of swapchain images (\cil{VkImageUsageFlagBits} were described earlier, as the \cil{supportedUsages} member of \cil{VkSurfaceCapabilitiesKHR} also returns a bitmask of \cil{VkImageUsageFlagBits}, describing what sort of images a surface associated with the physical device in question can support)
+        
+        \item \cil{imageSharingMode}: specifies how swapchain images can be shared
+        \begin{minted}{c}
+typedef enum VkSharingMode {
+    VK_SHARING_MODE_EXCLUSIVE = 0,
+    VK_SHARING_MODE_CONCURRENT = 1,
+} VkSharingMode;
+        \end{minted}
+            \begin{itemize}
+                \item \cil{VK_SHARING_MODE_EXCLUSIVE}: image access is exclusive to one queue family at a time
+                
+                \item \cil{VK_SHARING_MODE_CONCURRENT}: image access from multiple queue families at the same time (concurrently) is allowed
+            \end{itemize}
+        
+        \item \cil{queueFamilyIndexCount}: number of queue families having access to swapchain images when \cil{imageSharingMode} is \cil{VK_SHARING_MODE_CONCURRENT}
+        
+        \item \cil{pQueueFamilyIndices}: array of queue family indices having access to swapchain images when \cil{imageSharingMode} is \cil{VK_SHARING_MODE_CONCURRENT}
+        
+        \item \cil{preTransform}: a \cil{VkSurfaceTransformFlagBitsKHR} value (described earlier in the document) describing which transform should be performed on images before the presentation engine performs its final transformations
+        
+        \item \cil{compositeAlpha}: a \cil{VkCompositeAlphaFlagBitsKHR} value indicating the alpha compositing mode to use when surface associated with swapchain is composited with other surfaces
+        
+        \item \cil{presentMode}: presentation mode swapchain will use which determines the order in which incoming present requests will be processed 
+            \begin{minted}{c}
+typedef enum VkPresentModeKHR {
+    VK_PRESENT_MODE_IMMEDIATE_KHR = 0,
+    VK_PRESENT_MODE_MAILBOX_KHR = 1,
+    VK_PRESENT_MODE_FIFO_KHR = 2,
+    VK_PRESENT_MODE_FIFO_RELAXED_KHR = 3,
+    VK_PRESENT_MODE_SHARED_DEMAND_REFRESH_KHR = 1000111000,
+    VK_PRESENT_MODE_SHARED_CONTINUOUS_REFRESH_KHR = 1000111001,
+} VkPresentModeKHR;
+            \end{minted}
+            \begin{itemize}
+                \item \cil{VK_PRESENT_MODE_IMMEDIATE_KHR}: presentation engine does not wait for monitor to finish updating image on screen---presentation is performed immediately, but this can lead to problems (called \inquotes{tearing}) where the user sees multiple frames at the same time (as the monitor might still be in the process of clearing the last frame while the next one is already being drawn)
+                
+                \item \cil{VK_PRESENT_MODE_MAILBOX_KHR}: presentation engine waits for the next vertical blanking period to update the current image (thus taking care of tearing); single-entry queue is used to hold presentation requests while waiting; if queue is full, the new request replaces the (last?) existing entry, and images associated with the replaced entry become available for acquisition by the application
+                
+                \item \cil{VK_PRESENT_MODE_FIFO_KHR}: presentation engine waits for the next vertical blanking period to update the current image; \inquotes{first-in-first-out} (FIFO) queue is used to hold pending presentation requests, i.e. new requests go to the end of the queue, and one request is removed from the front of the queue and processed during each vertical blanking period
+                
+                \item \cil{VK_PRESENT_MODE_FIFO_RELAXED_KHR}: presentation engine generally waits for the next vertical blanking period to update the current image, unless a vertical blanking period has already passed since last update (this can result in tearing); useful for reducing visual stutter (noticeably slow/stuttering animation) when one knows that application that will usually present a new image before the next vertical blanking period, but may occasionally be late; FIFO queue is used to hold presentation requests
+                
+                \item \cil{VK_PRESENT_MODE_SHARED_DEMAND_REFRESH_KHR}: presentation engine and application have concurrent access to a single image, called the \inquotes{shared presentable image}; presentation engine only updates current image after a new presentation request is received from the application, i.e. presentation requests are not processed per the rate of monitor vertical blanking, thus, this can result in visual tearing if the application sends update requests too fast
+                
+                \item \cil{VK_PRESENT_MODE_SHARED_CONTINUOUS_REFRESH_KHR}: presentation engine and application have concurrent access to a single shared presentable image; presentation engine periodically updates the current image (the image displayed) per its own refresh cycle, without prompting from application through a presentation request, i.e. application only needs to to make one initial presentation request; the application can indicate the image contents have been updated by making a presentation request, but no guarantees are provided as to when the displayed image will be updated (again, tearing is possible if presentation engine's refresh period is faster than the vertical blanking period)
+            \end{itemize}
+        
+        \item \cil{clipped}: specifies whether Vulkan is allowed to discard rendering operations for regions of the scene that are not visible (e.g. because viewing area is blocked by another window); clipped area of images will hold garbage data upon which shaders cannot peform meaningful operations; the Vulkan specification recommends:
+            \begin{quotation}
+                Applications should set this value to \cil{VK_TRUE} if they do not expect to read back the content of presentable images before presenting them or after reacquiring them, and if their pixel shaders do not have any side effects that require them to run for all pixels in the presentable image.
+            \end{quotation}
+        
+        \item \cil{oldSwapchain}: \cil{VK_NULL_HANDLE} (i.e. no old swapchain), or the existing non-retired swapchain associated with surface; providing the old swapchain will allow the application to present any images acquired from it, and will also help with resource re-use
+    \end{itemize}
+    
 \section{Thanks}
 	The information in this tutorial was derived from multiple sources (\inquotes{"<search engine> is your best friend!"}), but some stand prominent amongst them. Grateful thanks is owed to:
 		\begin{enumerate}
