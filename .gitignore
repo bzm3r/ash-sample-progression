@@ -9,7 +9,7 @@ tutorial-doc/*.out
 tutorial-doc/*.synctex.gz
 tutorial-doc/*.bcf
 tutorial-doc/*.run.xml
-tutorial-doc/_minted-ash-tutorial/
+tutorial/_minted-ash-tutorial/
 ash-samples/.idea
 
 
